@@ -1,0 +1,71 @@
+extern void object::ISZB()
+{
+	int baseSize = 50; //how big is the base supposed to be
+	int resRequiredAmount = 5; //amount of resources that should be wihtnin base's borders
+	int resWarnAmount = 2; //warn when only this many resources are in the base
+	int baseCenter = SpaceShip; //used to calculate base size, change accordingly
+	   
+	bool warnTitanium = false;
+	bool warnCell = false;
+	point base = GetBaseCenter(baseCenter);
+	   
+	message("Inteligent Base Management System v1.0", DisplayMessage);
+	message("Base centered at "+base.x+";"+base.y, DisplayInfo);
+	while(true) 
+	{
+		if(CountArea(Titanium, base, baseSize) <= resWarnAmount) 
+		{
+			 if(!warnTitanium) message("Low on Titanium!", DisplayWarning);
+			 warnTitanium=true;
+		}
+		else warnTitanium=false;
+		if((CountArea(PowerCell, base, baseSize)+CountArea(NuclearCell, base, baseSize)) <= resWarnAmount) 
+		{
+			 if(!warnCell) message("Low on PowerCells!", DisplayWarning);
+			 warnCell=true;
+		}
+		else warnCell=false;
+	}
+}
+point object::GetBaseCenter(int baseCenter)
+{
+	object item = radar(baseCenter);
+	
+	if(item!=null) 
+	{
+		return item.position;
+	}
+	else
+	{
+		item=radar(BlueFlag);
+		if(item!=null)
+		{
+			return item.position;
+		}
+	}
+	return this.position;
+}
+int object::Count(int cat)
+{
+	int count = 0;
+	
+	for(int i=1;i<300;i++) 
+	{
+		object item = retobject(i);
+		if(item==null) continue;
+		if(item.category==cat) count++;
+	}
+	return count;
+}
+int object::CountArea(int cat, point pos, int dist)
+{
+	int count = 0;
+	
+	for(int i=1;i<300;i++) 
+	{
+		 object item = retobject(i);
+		 if(item==null) continue;
+		 if(item.category==cat && distance(pos, item.position) < dist) count++;
+	}
+	return count;
+}

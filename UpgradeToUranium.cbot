@@ -1,0 +1,94 @@
+extern void object::UpgradeToUranium()
+{
+	bool upgradeOwnCellFirst = true; // only if there is more than enough NuclearCells for everyone
+	
+	
+	int list[], i;
+	i = 0;
+	list[i++] = WingedGrabber;
+	list[i++] = TrackedGrabber;
+	list[i++] = WheeledGrabber;
+	list[i++] = LeggedGrabber;
+	list[i++] = WingedBuilder;
+	list[i++] = TrackedBuilder;
+	list[i++] = WheeledBuilder;
+	list[i++] = LeggedBuilder;
+	list[i++] = PracticeBot;
+	list[i++] = TargetBot;
+	list[i++] = WingedShooter;
+	list[i++] = TrackedShooter;
+	list[i++] = WheeledShooter;
+	list[i++] = LeggedShooter;
+	list[i++] = WingedOrgaShooter;
+	list[i++] = TrackedOrgaShooter;
+	list[i++] = WheeledOrgaShooter;
+	list[i++] = LeggedOrgaShooter;
+	list[i++] = WingedSniffer;
+	list[i++] = TrackedSniffer;
+	list[i++] = WheeledSniffer;
+	list[i++] = LeggedSniffer;
+	list[i++] = Thumper;
+	list[i++] = PhazerShooter;
+	list[i++] = Recycler;
+	list[i++] = Shielder;
+	list[i++] = Subber;
+	object[] botList = radar(list);
+
+	for(int i = 0;i <= sizeof(botList);i++)
+	{
+		if(upgradeOwnCellFirst == true and sizeof(radarall(NuclearCell)) > sizeof(botList) and energyCell.category != NuclearCell) // picking up a cell for yourself if possible
+		{
+			object cell = radar(NuclearCell);
+			goto(cell.position);
+			grab();
+			drop(Behind);
+			grab(EnergyCell);
+			drop();
+			grab(Behind);
+			drop(EnergyCell);
+		}
+		if(botList[i].energyCell.category != NuclearCell) //bot has something that is not a NuclearCell
+		{
+			object cell = radar(NuclearCell);
+			goto(cell.position);
+			grab();
+			goto(botList[i].position);
+			turn(90);
+			drop();
+			turn(-90);
+			grab();
+			turn(-90);
+			drop();
+			turn(180);
+			grab();
+			turn(-90);
+			drop();
+		}
+		else if(botList[i].energyCell == null) //no cell
+		{
+			object cell = radar(NuclearCell);
+			goto(cell.position);
+			grab();
+			goto(botList[i].position);
+			drop();
+		}
+		else if(search(BotFactory,list[i].position,0,4) != null and botList[i].energyCell.category != NuclearCell) //bot in factory
+		{
+			object cell = radar(NuclearCell);
+			goto(cell.position);
+			grab();
+			goto(space(botList[i].position));
+			drop();
+			object cellInFront = radar(NuclearCell,0,45,0,10);
+			goto(botList[i].position);
+			grab();
+			goto(space());
+			drop();
+			goto(cellInFront.position);
+			grab();
+			goto(botList[i].position);
+			drop();
+			goto(space());
+		}
+	}
+}

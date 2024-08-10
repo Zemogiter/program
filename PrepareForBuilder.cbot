@@ -1,0 +1,23 @@
+extern void object::PrepareForBuilder()
+{
+	object ship = radar(SpaceShip);
+	object cube = radar(Titanium);
+	object converter = radar(Converter);
+	
+	if(distance(ship.position, cube.position) < 10)
+	{
+		goto(cube.position);
+		grab();
+		goto(flatspace(position,5, 40));
+		drop();
+		goto(space(ship.position,0,10,2));
+	}
+	else if(converter != null && distance(converter.position, cube.position) < 4)
+	{
+		goto(cube.position);
+		grab();
+		goto(flatspace(converter.position,5, 40));
+		drop();
+		goto(space(converter.position));
+	}
+}

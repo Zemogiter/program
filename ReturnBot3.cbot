@@ -1,0 +1,196 @@
+extern void object::ReturnBot3() //simple builder bot program, checks a list of buildings against what exist on the map and acts accordingly
+{
+	bool stayCloseToBase = true; //change accordingly
+	bool countinousMode = true; //builder will automaticaly try to make the next building on the list
+	object center = radar(SpaceShip); //change accordingly
+	float distanceToCube = 15; //how far from the center of the base (i.e. SpaceShip) should the cube be?
+	float triggerValue = 0.4; //if battery is below this level, we will try to recharge
+	
+	float dist = distance(position,center.position);
+	
+	int[] derrickSpotList;
+	derrickSpotList[0] = TitaniumSpot;
+	derrickSpotList[1] = UraniumSpot;
+	derrickSpotList[2] = KeyASpot;
+	derrickSpotList[3] = KeyBSpot;
+	derrickSpotList[4] = KeyCSpot;
+	derrickSpotList[5] = KeyDSpot;
+	object derrickSpot = radar(derrickSpotList);
+	
+	int cat[];                
+	cat[0] = AlienAnt;    
+	cat[1] = AlienWorm;  
+	cat[2] = AlienWasp; 
+	cat[3] = AlienSpider;
+	cat[4] = AlienEgg;
+	cat[6] = AlienQueen;
+	cat[7] = GreenMushroom;
+	
+	object waypoint = radar(WayPoint);
+	int i = 0;
+	int[] buildList;
+	//some of the entries in buildList are commented out because they are better placed manually
+	if (radar(TitaniumOre) != null) //if no ore on the map, we should skip this and hope there are wrecks we can salvage
+	{
+		buildList[i++] = Converter;
+	}
+	buildList[i++] = BotFactory;
+	if (search(PowerSpot, GetFarCube(center, distanceToCube),0,5) != null)
+	{
+		buildList[i++] = PowerStation;
+		buildList[i++] = PowerPlant;
+	}
+	buildList[i++] = ResearchCenter;
+	if (waypoint != null && search(waypoint.category, GetFarCube(center,distanceToCube),0,5) != null)
+	{
+		buildList[i++] = RadarStation;
+	}
+	//buildList[i++] = ExchangePost;
+	if (derrickSpot != null && search(derrickSpot.category, GetFarCube(center, distanceToCube),0,5) != null)
+	{
+		buildList[i++] = Derrick;
+	}
+	if (radar(cat) != null) //if there are no aliens, RepairCenter dosen't make much sense
+	{
+		buildList[i++] = RepairCenter;
+	} 
+	//buildList[i++] = DefenseTower;
+	buildList[i++] = AutoLab;
+	buildList[i++] = NuclearPlant; 
+	//buildList[i++] = PowerCaptor;
+	
+	int k = 0;
+	
+	message("We're running with this build list: " + buildList);
+	wait(1);
+	while (k != sizeof(buildList))
+	{
+		Maintenance(triggerValue);
+		if (dist > 100 && stayCloseToBase == true)
+		{
+			message("Too far from the base, returning.");
+			goto(center.position);
+		}
+		while(radar(Titanium) == null)
+		{
+			wait(1);
+		}
+		for (k = 0; k<=sizeof(buildList);k++)
+		{
+			errmode(0);
+			if (k == sizeof(buildList))
+			{
+				message("All possible buildings from the list are present. Ensure there are titanium cubes on power/resource spots. Halting program.");
+				break;
+			}
+			if (radar(buildList[k],0,360,0,1000,1) == null and canbuild(buildList[k]) == true) //if building is not present and possible to build
+			{
+				message("Going to Titanium cube to build " + buildList[k]);
+				goto(GetFarCube(center, distanceToCube));
+				object cube = radar(Titanium, 0, 45, 0, 20);
+				float flat = flatground(cube.position,10);
+				if(flat >= 10)
+				{
+					message("Not enough flat ground around Titanium. Halting program.", DisplayError);
+					break;
+				}
+				message("Building " + buildList[k]);
+				build(buildList[k]);
+				goto(space());
+				break;
+			}
+			else if (radar(buildList[k]) == null and canbuild(buildList[k]) == false)
+			{
+				message(buildList[k] + " is not available for this mission. Changing to the next one in the build list.");
+				wait(1);
+				continue;
+			}
+			else if (radar(buildList[k],0,360,0,1000,1) != null ) //if building is already there, move to the next spot on the buildList
+			{
+				message(buildList[k] + " is already present on map. Changing to the next one in the build list.");
+				wait(1);
+				continue;
+			}
+			errmode(1);
+		}
+		if (countinousMode == false)
+		{
+			break;
+		}
+	}
+	Maintenance(triggerValue);
+}
+
+void object::Maintenance(float triggerValue)
+{
+	int list[], i;
+	object power,repair;
+	
+	i = 0;
+	list[i++] = PowerStation;
+	list[i++] = PowerCaptor;
+	errmode(0);
+	power = radar(list);
+	
+	if(energyCell.energyLevel < triggerValue && energyCell.category != NuclearCell)
+	{
+		message("Battery low, going to recharge facility", DisplayInfo);
+		goto(power.position);
+		while(energyCell.energyLevel < 1)
+		{
+			wait(1);
+		}
+	}
+	else if (energyCell.energyLevel < triggerValue and power == null and energyCell.category == PowerCell) //checking if we have power cell so that we wont display this error needlessly
+	{
+		message("Power Station/Captor not found.", DisplayError);
+	}
+	else if (energyCell.energyLevel < triggerValue and canbuild(PowerStation) == false && canbuild(PowerCaptor) == false) //can't do canbuild(list), it expects a int value (not list) or category name
+	{
+		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+	}
+	
+	repair = radar(RepairCenter);
+	
+	if(shieldLevel < triggerValue)
+	{
+		message("Structural integritty low, going to Repair Center", DisplayInfo);
+		goto(repair.position);
+		while(shieldLevel < 1)
+		{
+			wait(1);
+		}
+	}
+	else if (shieldLevel < triggerValue and repair == null)
+	{
+		message("Repair Center not found.", DisplayError);
+	}
+	else if (shieldLevel < triggerValue and canbuild(repair.category) == false)
+	{
+		message("Repair Center not accesible in this mission.", DisplayWarning);
+	}
+	
+	errmode(1);
+}
+point object::GetFarCube(object ship, float distanceToCube)
+{
+	errmode(0);
+	object[] cubeList = radarall(Titanium);
+	object FarCube;
+	for (int i = 0;i <= sizeof(cubeList);i++)
+	{
+		if (i == sizeof(cubeList))
+		{
+			message("No Titanium cubes sufficently far away from " + ship.category + ", halting program", DisplayWarning);
+			break;
+		}
+		if (distance(ship.position, cubeList[i].position) >= distanceToCube && search(Converter,cubeList[i].position,0,4) == null)
+		{
+			FarCube = cubeList[i];
+			break;
+		}
+		
+	}
+	return FarCube.position;
+	errmode(1);
+}

@@ -1,0 +1,174 @@
+extern void object::ReturnBot2() //a quick and dirty program to prepare resources for Space Ship takeoff
+{
+	object item = radar(Titanium); //change accordingly
+	bool ignoreShip = false; // have a BlueFlag ready if you set this to true
+	float triggerValue = 0.4; //grabber will go rechare it's Power Cell once it reaches this level
+	bool lookforcells = false; 
+	
+	object[] itemList = radarall(item.category); 
+	object ship = radar(SpaceShip);
+	
+	if(ship == null or ignoreShip == true)
+	{
+		ship = radar(BlueFlag);
+	}
+	
+	Mainteneance(lookforcells,triggerValue);
+	if(load != null && load.category != item.category)
+	{
+		drop();
+		TransportToShip(ship,false,itemList, item, lookforcells, triggerValue, ignoreShip);
+	}
+	else if (load != null && load.category == item.category)
+	{
+		TransportToShip(ship,true,itemList, item, lookforcells, triggerValue, ignoreShip);
+	}
+	else
+	{
+		TransportToShip(ship,false,itemList, item, lookforcells, triggerValue, ignoreShip);
+	}
+	Mainteneance(lookforcells,triggerValue);
+}
+void object::TransportToShip(object ship, bool hasItem, object[] itemList, object item, bool lookforcells, float triggerValue, bool ignoreShip)
+{
+	for(int i = 0;i <= sizeof(itemList);i++)
+	{
+		if(i == sizeof(itemList))
+		{
+			message("Finieshed the transportation of " + item.category + " to " + ship.category);
+			break;
+		}
+		if(itemList[i].category == NuclearCell && itemList[i].energyLevel < 0.01)
+		{
+			continue; // we should ignore (nearly)empty Nuclear Cells
+		}
+		
+		object botFactory = radar(BotFactory);
+		object converter = search(Converter,ship.position);
+		int[] spotList;
+		spotList[0] = PowerSpot;
+		spotList[1] = TitaniumSpot;
+		spotList[2] = UraniumSpot;
+		spotList[3] = KeyASpot;
+		spotList[4] = KeyBSpot;
+		spotList[5] = KeyCSpot;
+		spotList[6] = KeyDSpot;
+		object spot = radar(spotList);
+		
+		if(distance(itemList[i].position, ship.position) > 15 and (botFactory != null and distance(itemList[i].position,botFactory.position) > 5) and (converter != null and distance(itemList[i].position,converter.position) > 15) and (spot != null and distance(itemList[i].position, spot.position) > 5)) //ensureing we won't take cubes that are probably close to the base anyways
+		{
+			if(hasItem == false)
+			{
+				trygoto(itemList[i].position);
+				grab();
+			}
+			Mainteneance(lookforcells,triggerValue);
+			goto(space(ship.position,0,13));
+			if(ignoreShip == false)
+			{
+				turn(direction(ship.position));
+				move(3); //watch this space
+			}
+			drop();
+		}
+	}
+}
+void object::trygoto(point pos)
+{
+	errmode(0);
+	int tries = 0;
+	while (distance(position, pos) > 0) //While we are moving towards destination...
+	{
+		while (goto(pos) != 0) //How we are handling goto() errors
+		{
+			if(tries > 2)
+			{
+				point midPoint;
+				midPoint.x = ((position.x + pos.x) / 2);
+				midPoint.y = ((position.y + pos.y) / 2);
+				midPoint.z = ((position.z + pos.z) / 2);
+				goto(midPoint);
+				wait(0.5);
+				goto(pos, 0, 1);
+				break;
+			}
+			else wait(2);
+			tries++;
+		}
+		errmode(1);
+		break;
+	}
+}
+void object::Mainteneance(bool lookforcells, float triggerValue)
+{
+	int list[], i;
+	object power,repair;
+	
+	i = 0;
+	list[i++] = PowerStation;
+	list[i++] = PowerCaptor;
+	
+	errmode(0);
+	
+	power = radar(list);
+	
+	if(power == null && lookforcells == true && this.category != Subber)
+	{
+		int cellList[];
+		cellList[0] = PowerCell;
+		cellList[1] = NuclearCell;
+		object cell = radar(cellList);
+		
+		if(cell.energyLevel >= energyCell.energyLevel && cell.energyLevel >= triggerValue)
+		{
+			message("Swapping with better PowerCell/NuclearCell...",DisplayInfo);
+			goto(cell.position);
+			grab();   
+			drop(Behind);
+			grab(EnergyCell);  
+			drop();
+			grab(Behind);
+			drop(EnergyCell);
+		}
+	}
+	
+	if(power != null && energyCell.energyLevel < triggerValue && energyCell.category != NuclearCell)
+	{
+		message("Battery low, going to recharge facility", DisplayInfo);
+		trygoto(power.position);
+		while(energyCell.energyLevel < 1)
+		{
+			wait(1);
+		}
+	}
+	else if (energyCell.energyLevel < triggerValue && power == null && energyCell.category == PowerCell) //checking if we have power cell so that we wont display this error needlessly
+	{
+		message("Power Station/Captor not found.", DisplayError);
+	}
+	else if (energyCell.energyLevel < triggerValue && canbuild(PowerStation) == false && canbuild(PowerCaptor) == false) //can't do canbuild(list), it expects a int value (not list) or category name
+	{
+		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+	}
+	
+	repair = radar(RepairCenter);
+	
+	if(shieldLevel < 0.5)
+	{
+		message("Structural integritty low, going to Repair Center", DisplayInfo);
+		goto(repair.position);
+		while(shieldLevel < 1)
+		{
+			wait(1);
+		}
+	}
+	else if (shieldLevel < 0.5 && radar(repair.category) == null)
+	{
+		message("Power Station/Captor not found.", DisplayError);
+	}
+	else if (shieldLevel < 0.5 && canbuild(repair.category) == false)
+	{
+		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+	}
+	
+	errmode(1);
+}

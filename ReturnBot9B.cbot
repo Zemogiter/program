@@ -1,0 +1,77 @@
+extern void object::ReturnBot9B() //Part two, tells grabber to wait until the exchange post has information it needs to process uranium ore
+{
+	int targetAmount = 2; //change accordingly
+	
+	object post = radar(ExchangePost);
+	object atomic = radar(NuclearPlant);
+	
+	while(RefreshList() <= targetAmount)
+	{
+		if(RefreshList() >= targetAmount)
+		{
+			message("Reached the quota on Nuclear Cells.", DisplayInfo);
+			break;
+		}
+		Maintenance();
+		while(testinfo("PosX",100) == false)
+		{
+			wait(1);
+		}
+		point uran;
+		uran.x = receive("PosX",100);
+		uran.y = receive("PosY",100);
+		uran.z = receive("PosZ",100);
+		deleteinfo("PosX",100);
+		deleteinfo("PosY",100);
+		deleteinfo("PosZ",100);
+		goto(uran);
+		grab();
+		goto(atomic.position);
+		drop();
+		move(-3);
+		wait(3);
+		while(isbusy(atomic))
+		{
+			wait(1);
+		}
+		grab();
+		goto(space(atomic.position));
+		drop();
+		Maintenance();
+		goto(space(post.position));
+	}
+}
+void object::Maintenance()
+{
+	if ( energyCell.category == PowerCell and energyCell.energyLevel < 0.6 )
+	{
+		object item = radar(PowerStation);
+		if ( item != null )
+		{
+			goto(item.position);
+			while ( energyCell.energyLevel < 1 )
+			{
+				wait(1);
+			}
+		}
+	}
+}
+int object::RefreshList()
+{
+	object[] list = radarall(NuclearCell);
+	object[] trueList;
+	
+	for(int i = 0; i < sizeof(list);i++)
+	{
+		if(list[i].energyLevel == 1)
+		{
+			trueList[i] = list[i];
+		}
+		else
+		{
+			continue;
+		}
+	}
+	
+	return sizeof(trueList);
+}

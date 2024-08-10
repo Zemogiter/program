@@ -1,0 +1,201 @@
+extern void object::RecyclerAutomation()
+{
+	object[] wreckList = radarall(Wreck);
+	object power;
+	object integrity;
+	
+	if (wreckList == null)
+	{
+		message("No wrecks found on the map.");
+	}
+	else
+	{
+		message("Number of wrecks found on the map: " + sizeof(wreckList));
+	}
+	while(wreckList != null) //checks for wrecks on map before anything else, otherwise the program stops after recycling a single wreck
+	{
+		if (energyCell != null && energyCell.energyLevel < 0.5 && energyCell.category != NuclearCell or shieldLevel < 0.5) //Check for battery/integrity before anything else
+		{
+			Mainteneance();
+		}
+		object wreckInFront = radar(Wreck,0,60,0,5); //handling wrecks right in front separate to avoid unnecessary moving the recycler and wasting battery
+		if(wreckInFront != null && topo(wreckInFront.position) >= 0)
+		{
+			if (recycle() == 0 and radar(Wreck) != null)
+			{
+				message("Wreck recycled, moving on.");
+			}
+			else
+			{
+				//to-do: figure out how to calculate a point on the other side of a object
+				/*message("Recycler failure, trying from the other side", DisplayWarning);
+				point otherSide(wreckInFront.position.x+2, wreckInFront.position.y+2, wreckInFront.position.z);
+				if(topo(otherSide) > 0)
+				{
+					goto(otherSide);
+					turn(direction(wreckInFront.position));
+					recycle();
+				}*/
+				float angle = wreckInFront.orientation;
+				float radius = 5;
+				point otherSide;
+				otherSide.x = wreckInFront.position.x + radius * cos(angle);
+				otherSide.y = wreckInFront.position.y + radius * sin(angle);
+				if(topo(otherSide) > 0)
+				{
+					goto(otherSide);
+					turn(direction(wreckInFront.position));
+					recycle();
+				}
+			}
+		}
+		
+		object wreck = radar(Wreck); //defining wreck object here to prevent illegal object errors
+		
+		if (wreck == null or wreckList == null)
+		{
+			message("No wrecks found on the map.");
+			break;
+		}
+		trygoto(WreckCheck());
+		turn(direction(WreckCheck()));
+		while(distance(position,wreck.position) >= 5)
+		{
+			move(1);
+		}
+		errmode(0);
+		if (recycle() == 0 and radar(Wreck) != null)
+		{
+			message("Wreck recycled, moving on.");
+		}
+		else if (recycle() != 0)
+		{
+			message("Recycler error. Ajusting position", DisplayError);
+			float angle = wreck.orientation;
+			float radius = 5;
+			point otherSide;
+			otherSide.x = wreck.position.x + radius * cos(angle);
+			otherSide.y = wreck.position.y + radius * sin(angle);
+			if(topo(otherSide) > 0)
+			{
+				goto(otherSide);
+				turn(direction(wreckInFront.position));
+				recycle();
+			}
+		}
+		else
+		{
+			message("No wrecks found on the map.");
+			break;
+		}
+		errmode(1);
+	}
+}
+void object::Mainteneance()
+{
+	int list[], i;
+	object power,repair;
+	
+	i = 0;
+	list[i++] = PowerStation;
+	list[i++] = PowerCaptor;
+	
+	errmode(0);
+	
+	power = radar(list);
+	
+	if(energyCell.energyLevel < 0.5 && energyCell.category != NuclearCell)
+	{
+		message("Battery low, going to recharge facility", DisplayInfo);
+		trygoto(power.position);
+		while(energyCell.energyLevel < 1)
+		{
+			wait(1);
+		}
+	}
+	else if (energyCell.energyLevel < 0.5 && radar(list) == null && energyCell.category == PowerCell) //checking if we have power cell so that we wont display this error needlessly
+	{
+		message("Power Station/Captor not found.", DisplayError);
+	}
+	else if (energyCell.energyLevel < 0.5 && canbuild(PowerStation) == false && canbuild(PowerCaptor) == false) //can't do canbuild(list), it expects a int value (not list) or category name
+	{
+		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+	}
+	
+	repair = radar(RepairCenter);
+	
+	if(shieldLevel < 0.5)
+	{
+		message("Structural integritty low, going to Repair Center", DisplayInfo);
+		goto(repair.position);
+		while(shieldLevel < 1)
+		{
+			wait(1);
+		}
+	}
+	else if (shieldLevel < 0.5 && radar(repair.category) == null)
+	{
+		message("Power Station/Captor not found.", DisplayError);
+	}
+	else if (shieldLevel < 0.5 && canbuild(repair.category) == false)
+	{
+		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+	}
+	
+	errmode(1);
+}
+point object::WreckCheck()
+{
+	object wreck = radar(Wreck);
+	if (topo(wreck.position) < 0) //wreck underwater, looking for a different one
+	{
+		object wreckList[] = radarall(Wreck);
+		for(int i = 0; i < sizeof(wreckList); ++i)
+		{
+			if (topo(wreckList[i].position) >= 0)
+			{
+				wreck = wreckList[i];
+				break;
+			}
+		}
+		return wreck.position;
+	}
+	else
+	{
+		return wreck.position;
+	}
+}
+void object::trygoto(point pos)
+{
+	errmode(0);
+	int tries = 0;
+	while (distance(position, pos) > 0) //While we are moving towards destination...
+	{
+		while (goto(pos) != 0) //How we are handling goto() errors
+		{
+			if(tries > 2)
+			{
+				point midPoint;
+				midPoint.x = ((position.x + pos.x) / 2);
+				midPoint.y = ((position.y + pos.y) / 2);
+				midPoint.z = ((position.z + pos.z) / 2);
+				goto(midPoint);
+				wait(1);
+				goto(pos, 0, 1);
+				break;
+			}
+			else wait(2);
+			tries++;
+		}
+		errmode(1);
+		break;
+	}
+}
+void object::goto2(point positionn,float dist) // alternative goto to fix the issue of recycler bumping into wrecks, credits to DemoLisH from colobot.cba.pl
+{
+	    point a;
+	    a.z=positionn.z;
+	    a.x=positionn.x-((positionn.x-position.x)/distance2d(position,positionn))*dist;
+	    a.y=positionn.y-((positionn.y-position.y)/distance2d(position,positionn))*dist;
+	    goto(a);
+}

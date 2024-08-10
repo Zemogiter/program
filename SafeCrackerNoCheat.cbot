@@ -1,0 +1,177 @@
+extern void object::SafeCrackerNoCheat()
+{
+	object vault = radar(Vault);
+	
+	if(vault == null)
+	{
+		message("Vault not found. Manual check required.", DisplayWarning);
+	}
+	if(ClawCheck() == true) //if there's a key in grabber's claw
+	{
+		trygoto(space(vault.position));
+		drop();
+		TransportKeys(vault);
+	}
+	else
+	{
+		TransportKeys(vault);
+	}
+}
+void object::trygoto(point pos)
+{
+	errmode(0);
+	int tries = 0;
+	ipf(1000);
+	while (distance(position, pos) > 0) //While we are moving towards destination...
+	{
+		while (goto(pos) != 0) //How we are handling goto() errors
+		{
+			if(tries > 2)
+			{
+				point midPoint;
+				midPoint.x = ((position.x + pos.x) / 2);
+				midPoint.y = ((position.y + pos.y) / 2);
+				midPoint.z = ((position.z + pos.z) / 2);
+				goto(midPoint);
+				wait(1);
+				goto(pos, 0, 1);
+				break;
+			}
+			else wait(2);
+			tries++;
+		}
+		errmode(1);
+		break;
+	}
+}
+bool object::ClawCheck()
+{
+	if(load != null && (load.category == KeyA or load.category == KeyB or load.category == KeyC or load.category == KeyD))
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+	return false;
+}
+void object::TransportKeys(object vault) //finds the key and moves with it to the vault's vicinity
+{
+	for (int j = 0;j <= 3;j++)
+	{
+		errmode(0);
+		Recharge();
+		point keyPos = PickKey(vault);
+		if (keyPos != new point(9999,9999,999))
+		{
+			trygoto(keyPos);
+			grab();
+			Recharge();
+			object vault = radar(Vault);
+			trygoto(space(vault.position));
+			drop();
+			PlaceKeys(vault);
+			Recharge();
+		}
+		else
+		{
+			message("All keys are at the vault's position, halting script.");
+			break;
+		}
+		errmode(1);
+	}
+}
+point object::PickKey(object vault)
+{
+	object[] keyList;
+	keyList[0] = radar(KeyA);
+	keyList[1] = radar(KeyB);
+	keyList[2] = radar(KeyC);
+	keyList[3] = radar(KeyD);
+	object key;
+	
+	for (int j = 0;j <= 3;j++)
+	{
+		key = keyList[j];
+		if (key != null and distance(key.position,vault.position) > 10)
+		{
+			key = keyList[j];
+			return key.position;
+		}
+	}
+	return new point(9999,9999,999);
+}
+void object::PlaceKeys(object vault)
+{
+	point pntKeyA;
+	point pntKeyB;
+	point pntKeyC;
+	point pntKeyD;
+	float fltAng;
+	float fltOri = vault.orientation;
+	    
+	fltAng = fltOri-180;
+	pntKeyA.x = vault.position.x + (4*cos(fltAng));
+	pntKeyA.y = vault.position.y + (4*sin(fltAng));
+	
+	if(search(KeyA,pntKeyA,0,3) == null)
+	{
+		trygoto(pntKeyA);
+		wait(0.5);
+		move(-2);
+		drop();
+	}
+	
+	fltAng = fltOri;
+	pntKeyB.x = vault.position.x + (4*cos(fltAng));
+	pntKeyB.y = vault.position.y + (4*sin(fltAng));
+	
+	if (search(KeyB,pntKeyB,0,3) == null)
+	{
+		trygoto(pntKeyB);
+		wait(0.5);
+		move(-2);
+		drop();
+	}
+	
+	fltAng = fltOri-90;
+	pntKeyC.x = vault.position.x + (4*cos(fltAng));
+	pntKeyC.y = vault.position.y + (4*sin(fltAng));
+	
+	if(search(KeyC,pntKeyC,0,3) == null)
+	{
+		trygoto(pntKeyC);
+		wait(0.5);
+		move(-2);
+		drop();;
+	}
+	
+	fltAng = fltOri+90;
+	pntKeyD.x = vault.position.x + (4*cos(fltAng));
+	pntKeyD.y = vault.position.y + (4*sin(fltAng));
+	
+	if(search(KeyD,pntKeyD,0,3) == null)
+	{
+		trygoto(pntKeyD);
+		wait(0.5);
+		move(-2);
+		drop();
+	}
+}
+void object::Recharge()
+{
+	if ( energyCell.category == PowerCell and energyCell.energyLevel < 0.6 )
+	{                         // if so:
+		object item = radar(PowerStation);
+		if( item == null ){item = radar(PowerCaptor);}
+		if ( item != null )   // station found ?
+		{
+			goto(item.position); // go there
+			while ( energyCell.energyLevel < 1 )
+			{ // until recharged:
+				wait(1);      // wait
+			}
+		}
+	}
+}

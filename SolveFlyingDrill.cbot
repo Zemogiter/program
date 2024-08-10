@@ -1,0 +1,63 @@
+extern void object::SolveFlyingDrill() {
+
+  // This program flies through the Flying Drill #1 and #2 (Moon
+  // levels 2 and 3).
+  //
+  // It doesn't need to stop, and doesn't bump into anything.
+  // It is very smooth and precise.
+  // Most of the numbers were selected empirically.
+
+  object target;
+  float dist, dir, trueorient, rabbitoffset, height, maxspeed = 1, speed;
+  point rabbit;
+
+  while ((target = radar(Target2, 0, 180)) != null) {
+
+    // Get distance and height of target
+    dist = distance2d(position, target.position);
+    height = target.position.z - 1; // compensate for height of bot
+
+    // To fly a smooth curve going through the target, passing through
+    // the loop as perpendicular as possible, start by aiming for a
+    // spot slightly in front of the target. Then, have that spot move
+    // *through* the target to the other side as we approach. Think of
+    // it as the bot chasing a rabbit who is going through the hoop.
+    rabbitoffset = (dist > 25) ? 10 : dist - 15;
+    trueorient = target.orientation - 90;
+    rabbit.x = target.position.x + cos(trueorient) * rabbitoffset;
+    rabbit.y = target.position.y + sin(trueorient) * rabbitoffset;
+
+    // Sometimes the Target2's orientation is 180 degrees wrong. Check
+    // and correct for that here:
+    if ((rabbitoffset > 0 and distance2d(position, rabbit) > dist) or
+        (rabbitoffset < 0 and distance2d(position, rabbit) < dist)) {
+      trueorient += 180;
+      rabbit.x = target.position.x + cos(trueorient) * rabbitoffset;
+      rabbit.y = target.position.y + sin(trueorient) * rabbitoffset;
+    }
+
+    // Uncomment this line to visualize where it's aiming
+    //produce(rabbit, 0, WayPoint, "test");
+
+    // Get the direction toward the imaginary rabbit's position
+    dir = direction(rabbit);
+
+    // Keep approaching the height of the target itself
+    // However, do it more aggressively closer to target
+    jet((height - position.z) / (2 + dist / 2));
+
+    // Slow down slightly as we approach the target
+    // (Not needed anymore, as the flight is so smooth)
+    //speed = (dist > 5) ? maxspeed : dist / 10 + 0.5;
+    speed = maxspeed;
+
+    // Move forward and turn
+    motor(speed - (dir / 90), speed + (dir / 90));
+
+    wait(0.1); // only need to adjust 10 times a second
+  }
+
+  // Got all the targets.  Go to ship
+  target = radar(SpaceShip);
+  goto(target.position);
+}

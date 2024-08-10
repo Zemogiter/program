@@ -1,0 +1,375 @@
+extern void object::DeadBatteryReplacer()
+{
+	bool rechargeOldBattery = true; //if true, grabber will recharge the battery it replaced
+	
+	int[] list;
+	int i = 0;
+	
+	list[i++] = PracticeBot;
+	list[i++] = WheeledGrabber;
+	list[i++] = TrackedGrabber;
+	list[i++] = WingedGrabber;
+	list[i++] = LeggedGrabber;
+	list[i++] = WheeledSniffer;
+	list[i++] = TrackedSniffer;
+	list[i++] = WingedSniffer;
+	list[i++] = LeggedSniffer;
+	list[i++] = WheeledShooter;
+	list[i++] = TrackedShooter;
+	list[i++] = WingedShooter;
+	list[i++] = LeggedShooter;
+	list[i++] = WheeledOrgaShooter;
+	list[i++] = TrackedOrgaShooter;
+	list[i++] = WingedOrgaShooter;
+	list[i++] = LeggedOrgaShooter;
+	list[i++] = Recycler;
+	list[i++] = Thumper;
+	list[i++] = Shielder;
+	list[i++] = PhazerShooter;
+	list[i++] = WheeledBuilder;
+	list[i++] = TrackedBuilder;
+	list[i++] = WingedBuilder;
+	list[i++] = LeggedBuilder;
+	
+	object[] subList = radarall(Subber); 
+	
+	if(load != null)
+	{
+		drop();
+	}
+	for(int i = 0; i <= sizeof(subList); i++) // secondary loop, handling Subbers separatly to make sure we dont accidetally pick ones that are underwater
+	{
+		object battery = BatteryCheck();
+		
+		if(i == sizeof(subList))
+		{
+			break;
+		}
+		if(subList != null && topo(subList[i].position) > 3 && subList[i].energyCell != null && subList[i].energyCell.energyLevel < 0.3)
+		{
+			message("Found a Subber that is low on power, moving there.");
+			if(distance(position, battery.position) > 2)
+			{
+				trygoto(battery.position);
+			}
+			else
+			{
+				turn(direction(battery.position));
+			}
+			grab();
+			wait(1);
+			if(load != null and load.category != battery.category) //if grabber has a incorrect item
+			{
+				message("Grabber picked up the wrong item, correcting.");
+				goto(space());
+				drop();
+				trygoto(battery.position);
+				grab();
+			}
+			trygoto(subList[i].position);
+			turn(-90);
+			drop();
+			turn(90);
+			grab();
+			turn(90);
+			drop();
+			turn(-180);
+			grab();
+			turn(90);
+			drop();
+		}
+		else if(subList != null && topo(subList[i].position) > 3 && subList[i].energyCell == null)
+		{
+			message("Found a Subber that has no power cell, moving there.");
+			goto(battery.position);
+			grab();
+			if(load != null and load.category != battery.category) //if grabber has a incorrect item
+			{
+				message("Grabber picked up the wrong item, correcting.");
+				goto(space());
+				drop();
+				trygoto(battery.position);
+				grab();
+			}
+			goto(subList[i].position);
+			drop();
+		}
+	}
+	
+	object[] botList = radarall(list);
+	int listSize = sizeof(botList);
+	
+	for(int i = 0; i <= listSize;i++) // main loop
+	{
+		object battery = BatteryCheck();
+		
+		if (i == listSize)
+		{
+			message("No bots in need of battery switch.");
+			break;
+		}
+		BotInFactoryHandler(botList[i], rechargeOldBattery, battery);
+		if(botList[i].energyCell != null && botList[i].energyCell.energyLevel < 0.3)
+		{
+			message("Found a " + botList[i].category + " that is low on power, moving there.");
+			if(distance(position, battery.position) > 2)
+			{
+				trygoto(battery.position);
+			}
+			else
+			{
+				turn(direction(battery.position));
+			}
+			grab();
+			wait(1);
+			if(load != null and load.category != battery.category or load.energyLevel <= botList[i].energyCell.energyLevel) //if grabber has a incorrect item
+			{
+				message("Grabber picked up the wrong item, correcting.");
+				goto(space());
+				drop();
+				trygoto(battery.position);
+				grab();
+			}
+			trygoto(botList[i].position);
+			turn(-90);
+			drop();
+			turn(90);
+			grab();
+			turn(90);
+			drop();
+			turn(-180);
+			grab();
+			turn(90);
+			drop();
+			
+			object oldBattery = radar(PowerCell,0,360,0,5);
+			int i = 0;
+			int[] list;
+			list[i++] = PowerStation;
+			list[i++] = PowerCaptor;
+			object power = radar(list);
+			        
+			if(rechargeOldBattery == true && oldBattery != null && power != null)
+			{
+				turn(direction(oldBattery.position));
+				grab();
+				trygoto(power.position);
+				while(load.energyLevel < 1)
+				{
+					wait(1);
+				}
+				goto(space(power.position));
+				drop();
+			}
+		}
+		else if(botList[i].energyCell == null)
+		{
+			message("Found a " + botList[i].category + " that has no power cell, moving there.");
+			goto(battery.position);
+			grab();
+			if(load != null and load.category != battery.category) //if grabber has a incorrect item
+			{
+				message("Grabber picked up the wrong item, correcting.");
+				goto(space());
+				drop();
+				trygoto(battery.position);
+				grab();
+			}
+			goto(botList[i].position);
+			drop();
+		}
+	}
+}
+void object::BotInFactoryHandler(object bot, bool rechargeOldBattery, object battery) //checks if a bot is in BotFactory and acts accordingly
+{
+	if (search(BotFactory,bot.position,0,4) != null && bot.energyCell.energyLevel < 3)
+	{
+		message("Found a " + bot.category + " that is low on power and in a BotFactory, moving there.");
+		if(distance(position, battery.position) > 2)
+		{
+			trygoto(battery.position);
+		}
+		else
+		{
+			turn(direction(battery.position));
+		}
+		grab();
+		goto(space(bot.position));
+		drop();
+		
+		int j = 0;
+		int[] list;
+		list[j++] = PowerCell;
+		list[j++] = NuclearCell;
+		object battery = radar(list,0,60,0,5);
+		
+		goto(bot.position);
+		grab();
+		goto(space(bot.position));
+		drop();
+		
+		object oldBattery = radar(list,0,60,0,5);
+		
+		goto(battery.position);
+		grab();
+		goto(bot.position);
+		drop();
+		if(rechargeOldBattery == true && oldBattery != null && (radar(PowerStation) != null or radar(PowerCaptor) != null))
+		{
+			goto(oldBattery.position);
+			grab();
+			
+			int i = 0;
+			int[] list;
+			list[i++] = PowerStation;
+			list[i++] = PowerCaptor;
+			object power = radar(list);
+			
+			trygoto(power.position);
+			while(load.energyLevel < 1)
+			{
+				wait(1);
+			}
+			goto(space(power.position));
+			drop();
+		}
+	}
+	else if (search(BotFactory,bot.position,0,4) != null && bot.energyCell == null)
+	{
+		message("Found a freshly made " + bot.category + " without power source, moving there.");
+		if(distance(position, battery.position) > 2)
+		{
+			trygoto(battery.position);
+		}
+		else
+		{
+			turn(direction(battery.position));
+		}
+		grab();
+		if(load != null and load.category != battery.category) //if grabber has a incorrect item
+		{
+			message("Grabber picked up the wrong item, correcting.");
+			goto(space());
+			drop();
+			trygoto(battery.position);
+			grab();
+		}
+		goto(bot.position);
+		drop();
+	}
+}
+object object::BatteryCheck()
+{
+	//handling cases where grabber's claw is not empty
+	if (load != null && (load.category != PowerCell or load.category != NuclearCell))
+	{
+		goto(space());
+		drop();
+	}
+	else if (load != null && load.category == PowerCell)
+	{
+		drop();
+		object battery = radar(PowerCell,0,45,0,5);
+		return battery;
+	}
+	else if (load != null && load.category == NuclearCell)
+	{
+		drop();
+		object battery = radar(NuclearCell,0,45,0,5);
+		return battery;
+	}
+	
+	int j = 0;
+	int[] list;
+	list[j++] = PowerCell;
+	list[j++] = NuclearCell;
+	object battery = radar(list);
+	
+	if (battery.energyLevel < 1 && battery.category == PowerCell or (battery.category == NuclearCell and battery.energyLevel < 0.01)) //if the first found battery is not full and its rechargable (or its a empty Nuclear Cell, find the cell that is full 
+	{
+		object[] batteryList = radarall(list);
+		for(int i = 0; i < sizeof(batteryList); ++i)
+		{
+			if (batteryList[i].energyLevel == 1)
+			{
+				battery = batteryList[i];
+				break;
+			}
+		}
+		message("Debug - position of found " + battery.category + " at " + battery.position);
+		return battery;
+	}
+	else
+	{
+		message("Debug - position of found " + battery.category + " at " + battery.position);
+		return battery;
+	}
+}
+void object::trygoto(point pos)
+{
+	errmode(0);
+	int tries = 0;
+	while (distance(position, pos) > 0) //While we are moving towards destination...
+	{
+		temperatureGuard(); //...we're checking if the flying bot's engine is overheating
+		while (goto(pos) != 0) //How we are handling goto() errors
+		{
+			if(tries > 2)
+			{
+				point midPoint;
+				midPoint.x = ((position.x + pos.x) / 2);
+				midPoint.y = ((position.y + pos.y) / 2);
+				midPoint.z = ((position.z + pos.z) / 2);
+				goto(midPoint);
+				wait(1);
+				goto(pos, 0, 1);
+				break;
+			}
+			else wait(2);
+			tries++;
+		}
+		errmode(1);
+		break;
+	}
+}
+void object::temperatureGuard()        //land if temperature is to high
+{
+	point loc;
+	int counter;
+	
+	if(temperature > 0.7) 
+	{
+		message("Debug - temperatureGuard() active");
+		jet(0);
+		
+		while(topo(position) < 0)         //find somewhere to land
+		{                                                         
+			counter = 0;
+			while(counter < 36)        //part made by sclover@abac.com
+			{
+				loc.x = (cos(orientation) * 20.0) + position.x;
+				loc.y = (sin(orientation) * 20.0) + position.y;
+				loc.z = position.z + 5.0;
+				
+				if(topo(loc) >= -0.7)
+				{
+					move(20);
+					break;
+				}
+				turn(10);
+				counter++;
+			}
+			
+			if(topo(position) >= 0)
+			{
+				break;
+			}
+			motor(1, 1);
+			wait(2);
+		}
+		
+		motor(0, 0);        //stop and land
+		jet( -1 );
+		
+	}
+}

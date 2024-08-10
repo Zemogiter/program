@@ -1,0 +1,80 @@
+//A collection of code I had issues with and decided to either replace it or scrap alltogether. For research and archival.
+if (derrick != nullPoint && alien != nullPoint && distance(OreCheck(cooperativeMode), alien) < 40 && oreCount > 1) //If derrick exists, is not the only source for a titanium ore and the surface ore is unsafe due to alien presence, grabber will go to the derrick
+		{
+			message("Scenario 1 - going to derrick because surface ore is unsafe.");
+			trygoto(derrick, crashMode);
+			ClawCheck(cooperativeMode, triggerValue, crashMode);
+			Mainteneance(lookforcells,triggerValue,crashMode);
+			ConverterHandler(cooperativeMode, goToGoal, crashMode);
+		}
+		else if (derrick != nullPoint && alien != nullPoint && distance(OreCheck(cooperativeMode), alien) > 40 && oreCount > 1) //inverted - if derrick is less safe, bot goes to surface ore instead
+		{
+			message("Scenario 2 - going to surface ore because derrick is unsafe.");
+			ClawCheck(cooperativeMode, triggerValue, crashMode);
+			Mainteneance(lookforcells,triggerValue,crashMode);
+			ConverterHandler(cooperativeMode, goToGoal, crashMode);
+		}
+		else if (derrick != nullPoint && alien != nullPoint && distance(derrick, alien) > 40 && oreCount == 1) //if derrick exist and is the only source of titanium ore and is relativley safe from aliens, grabber will go to the derrick
+		{
+			message("Scenario 3 - going to derrick because it's the only option - there are hostiles on map.");
+			trygoto(derrick, crashMode);
+			ClawCheck(cooperativeMode, triggerValue, crashMode);
+			Mainteneance(lookforcells,triggerValue,crashMode);
+			ConverterHandler(cooperativeMode, goToGoal, crashMode);
+		}
+		else if (derrick == nullPoint && alien == nullPoint && oreCount > 0) //if no derrick, ore exists and no aliens, grabber will work as normal
+		{
+			message("Scenario 4 - going to surface ore because it's the only option - no hostiles found on map.");
+			ClawCheck(cooperativeMode, triggerValue, crashMode);
+			Mainteneance(lookforcells,triggerValue,crashMode);
+			ConverterHandler(cooperativeMode, goToGoal, crashMode);
+		}
+		else if (derrick != nullPoint && distance(position, OreCheck(cooperativeMode)) < distance(position, derrick) && distance(position, OreCheck(cooperativeMode)) < distance(position, derrickOre)) //A case when derrick exists but surface ores are better located, also checks if aliens exist
+		{
+			if(alien == nullPoint)
+			{
+				message("Scenario 5 - going to surface ore because it's closer - no hostiles found.");
+			}
+			else
+			{
+				message("Scenario 5a - going to surface ore because it's closer - there are hostiles on map.");
+			}
+			ClawCheck(cooperativeMode, triggerValue, crashMode);
+			Mainteneance(lookforcells,triggerValue,crashMode);
+			ConverterHandler(cooperativeMode, goToGoal, crashMode);
+		}
+		else if (derrick == nullPoint && alien != nullPoint && oreCount > 0) //no derrick, surface ore exists and aliens are on map
+		{
+			message("Scenario 6 - going to surface ore because it's the only option - there are hostiles on map.");
+			trygoto(derrick, crashMode);
+			ClawCheck(cooperativeMode, triggerValue, crashMode);
+			Mainteneance(lookforcells,triggerValue,crashMode);
+			ConverterHandler(cooperativeMode, goToGoal, crashMode);
+		}
+		else if (derrick != nullPoint && alien == nullPoint && oreCount > 0) //derrick exists, no surface ore exists and no aliens
+		{
+			message("Scenario 7 - going to derrick because it's the only option - no hostiles found on map.");
+			trygoto(derrick, crashMode);
+			ClawCheck(cooperativeMode, triggerValue, crashMode);
+			Mainteneance(lookforcells,triggerValue,crashMode);
+			ConverterHandler(cooperativeMode, goToGoal, crashMode);
+		}
+		else if (oreCount == 0 && derrick == nullPoint) //no ores and titanium-mining derricks on map
+		{
+			message("No surface ores or titanium-mining derricks.", DisplayWarning);
+			// code below handles situations when the bot is occupying a rechare facility while reciving a no ore warning
+			int list[], i;
+			object power;
+
+			i = 0;
+			list[i++] = PowerStation;
+			list[i++] = PowerCaptor;
+
+			power = radar(list);
+
+			if(power != null && distance(position,power.position) < 4)
+			{
+				goto(space());
+			}
+			break;
+		}

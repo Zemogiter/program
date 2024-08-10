@@ -1,0 +1,178 @@
+extern void object::Defend()
+{
+	int cat[];                
+	cat[0] = AlienAnt;    
+	cat[1] = AlienWorm;  
+	cat[2] = AlienWasp; 
+	cat[3] = AlienSpider;
+	
+	int parimeterToScan = 50;      // adjust value to look farther if needed 
+	point campSpot = position;     // position/spot to defend (default origin)
+	int maxDistFromCampSpot = 15;  // patrol radius
+	float shieldTreshold = 0.6; // at this shield level, bot will go to Repair Station
+	
+	object enemy;
+	
+	while(true)
+	{
+		enemy = radar(cat,0,360,0,parimeterToScan);
+		if(enemy == null)                                     // if no enemy around, fill up on energy if needed 
+		{
+			basicMaintE();
+		}
+		else
+		{
+			moveAndDestroy(enemy);                            // otherwise attack
+		}
+		
+		enemy = radar(cat,0,360,0,parimeterToScan);     // between recharging, enemy spotted?
+		if(enemy == null)                                     // if no enemy around, repair shields if needed
+		{
+			basicMaintS(shieldTreshold);
+		}
+		else
+		{
+			moveAndDestroy(enemy);                           // otherwise attack
+		}
+		
+		enemy = radar(cat,0,360,0,parimeterToScan);     // between recharging, enemy spotted?
+		if(enemy == null)                                     // if no further enemies around, move back into position
+		{
+			getBackToPosition(campSpot,maxDistFromCampSpot);
+		}
+		else
+		{
+			moveAndDestroy(enemy);                             // otherwise attack
+		}
+	}
+	
+}
+
+void object::basicMaintE()                             // basic energy maintenance
+{
+	if(energyCell.energyLevel < 0.5)                   // adjust energy tolerance here
+	{
+		object power; 
+		if( (power = radar(PowerStation)) != null )    // if there is a powerstation
+		{
+			goto(power.position);                      // go there
+			while(energyCell.energyLevel < 1)          // and fill up
+			{
+				wait(1);
+			} 
+		}
+	}
+}  
+
+void object::basicMaintS(float shieldTreshold)                             // basic shield maintenance
+{
+	if(shieldLevel < shieldTreshold)                              // adjust shield tolerance here
+	{
+		object rep = radar(RepairCenter);
+		object bot = radar(Shielder);
+		
+		if(rep != null)
+		{
+			goto(rep.position,5);
+			
+			while(shieldLevel < 1)
+			    wait(1);
+		}
+		else if(rep == null and bot != null)
+		{
+			goto(space(bot.position),5);
+			
+			while(shieldLevel < 1)
+			    wait(1);
+		}
+	}
+}
+
+void object::getBackToPosition(point pos, int parimeter)
+{ 
+	float dis = distance(position,pos);
+	
+	if(dis > parimeter)                  // if outside of patrol radius
+	{
+		float dif = pos.z-position.z;
+		float ang = asin(dif/dis);
+	
+		jet(1-(ang/-20));
+	
+		float dir = direction(pos);
+	
+		motor(1-dir/22.5,1+dir/22.5);    // move back into position
+	}
+	
+	else
+	{
+		motor(0,0);                      // otherwise camp
+		if(topo(position) > 0)           // if groundlevel is above water
+		{
+			jet(-1);                     // then it's safe to land
+		}        
+	}
+}
+
+void object::moveAndDestroy(object target)
+{
+	float dir;    // direction of target from shooter
+	float dis;    // distance of target from shooter
+	float dif;    // difference in altitude of target & shooter (relative to sea-level)
+	float ang;    // angle shooter must aim (-20 degrees favorable)
+	
+	dis = distance(position,target.position);
+	dif = target.position.z-position.z;
+	ang = asin(dif/dis);
+	
+	jet(1-(ang/-20));                         // thrust until 20 degress above target
+	
+	dir = direction(target.position); 
+	
+	motor(1-dir/22.5,1+dir/22.5);             // move towards enemy
+	
+	dis = distance(position,target.position);   
+	dif = target.position.z-position.z;         
+	ang = asin(dif/dis);                        
+	
+	aim(ang);                                 // take aim
+	
+	dir = direction(target.position);           
+	
+	if(dis < 40 and dir > -10 and dir < 10 and LOS(target,distance(position,target.position)) == true )   // if within range and there's a line of sight
+	{
+		fire(0.1);
+	}
+}
+
+boolean object::LOS(object objTarget, float fltDist)
+{
+	if(objTarget == null) return false;    //if it doesn't exist you can't see it
+	ipf(10000);                            //Zip through the code AFAP
+	point pntCheck;
+	point pntScale;
+	point pntHigh;
+	point pntPosAlt;
+	float fltDistance;
+	
+	pntPosAlt = position;
+	fltDistance = distance(position, objTarget.position);
+	
+	//Calculate the change per unit... "3d slope"
+	pntScale.x = (objTarget.position.x - position.x)/fltDistance;
+	pntScale.y = (objTarget.position.y - position.y)/fltDistance;
+	pntScale.z = (objTarget.position.z - position.z)/fltDistance;
+	
+	//loop until you have reached the location of the target
+	for(int I=fltDist; I < fltDistance; I=I+fltDist)
+	{
+		pntCheck.x = pntPosAlt.x + (pntScale.x * I);
+		pntCheck.y = pntPosAlt.y + (pntScale.y * I);
+		pntCheck.z = pntPosAlt.z + (pntScale.z * I);
+		
+		//see if the "line of site" that is calculated
+		//is above or below the ground
+		if(pntCheck.z < topo(pntCheck)) return false;
+	}
+	return true;
+}

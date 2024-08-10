@@ -1,0 +1,202 @@
+extern void object::MoveFromShip()
+{
+	object base = radar(BlueFlag); // change accordingly
+	int resourceToTake = Titanium; // as above
+	float dist = 20; // how far away from the ship should we look for resources to transport to the base
+	bool lookforcells = false;
+	float triggerValue = 0.3;
+	
+	object ship = radar(SpaceShip);
+	
+	for(int i = 0;i <= CountCubesAtShip(ship,dist,resourceToTake);i++)
+	{
+		object resourceAtShip = search(resourceToTake,ship.position,0,dist);
+		
+		Mainteneance(lookforcells, triggerValue);
+		if(load != null && load.category == resourceToTake)
+		{
+			message("Bot has the desired item already, going straight to the base.");
+			goto(space(base.position));
+			drop();
+		}
+		else if(load != null && load.category != resourceToTake)
+		{
+			goto(space());
+			drop();
+		}
+		goto(resourceAtShip.position);
+		if(grab() != 0)
+		{
+			resourceAtShip = radar(resourceToTake);
+			goto(resourceAtShip.position);
+			grab();
+		}
+		Mainteneance(lookforcells, triggerValue);
+		goto(space(base.position));
+		drop();
+	}
+	
+	
+	
+}
+int object::CountCubesAtShip(object ship, float dist, int resourceToTake)
+{
+	object[] cubeList = radarall(resourceToTake);
+	object[] cubeAtShipList;
+	for(int i = 0;i < sizeof(cubeList);i++)
+	{
+		//errmode(0);
+		if(i == sizeof(cubeList))
+		{
+			message("No more " + cubeList[i].category + " at ship's location, halting script.", DisplayWarning);
+			break;
+		}
+		if(distance(ship.position, cubeList[i].position) < dist)
+		{
+			cubeAtShipList[i] = cubeList[i];
+		}
+		//errmode(1);
+	}
+	return sizeof(cubeAtShipList);
+}
+void object::Mainteneance(bool lookforcells, float triggerValue)
+{
+	int list[], i;
+	object power,repair;
+	
+	i = 0;
+	list[i++] = PowerStation;
+	list[i++] = PowerCaptor;
+	
+	errmode(0);
+	
+	power = radar(list);
+	
+	if(power == null && lookforcells == true && this.category != Subber)
+	{
+		int cellList[];
+		cellList[0] = PowerCell;
+		cellList[1] = NuclearCell;
+		object cell = radar(cellList);
+		
+		if(cell.energyLevel >= energyCell.energyLevel && cell.energyLevel >= triggerValue)
+		{
+			message("Swapping with better PowerCell/NuclearCell...",DisplayInfo);
+			goto(cell.position);
+			grab();   
+			drop(Behind);
+			grab(EnergyCell);  
+			drop();
+			grab(Behind);
+			drop(EnergyCell);
+		}
+	}
+	
+	if(power != null && energyCell.energyLevel < triggerValue && energyCell.category != NuclearCell)
+	{
+		message("Battery low, going to recharge facility", DisplayInfo);
+		goto(power.position);
+		while(energyCell.energyLevel < 1)
+		{
+			wait(1);
+		}
+	}
+	else if (energyCell.energyLevel < triggerValue && power == null && energyCell.category == PowerCell) //checking if we have power cell so that we wont display this error needlessly
+	{
+		message("Power Station/Captor not found.", DisplayError);
+	}
+	else if (energyCell.energyLevel < triggerValue && canbuild(PowerStation) == false && canbuild(PowerCaptor) == false) //can't do canbuild(list), it expects a int value (not list) or category name
+	{
+		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+	}
+	
+	repair = radar(RepairCenter);
+	
+	if(shieldLevel < 0.5)
+	{
+		message("Structural integritty low, going to Repair Center", DisplayInfo);
+		goto(repair.position);
+		while(shieldLevel < 1)
+		{
+			wait(1);
+		}
+	}
+	else if (shieldLevel < 0.5 && radar(repair.category) == null)
+	{
+		message("Power Station/Captor not found.", DisplayError);
+	}
+	else if (shieldLevel < 0.5 && canbuild(repair.category) == false)
+	{
+		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+	}
+	
+	errmode(1);
+}
+void object::trygoto(point pos)
+{
+	errmode(0);
+	int tries = 0;
+	while (distance(position, pos) > 0) //While we are moving towards destination...
+	{
+		temperatureGuard(); //...we're checking if the flying bot's engine is overheating
+		while (goto(pos) != 0) //How we are handling goto() errors
+		{
+			if(tries > 2)
+			{
+				point midPoint;
+				midPoint.x = ((position.x + pos.x) / 2);
+				midPoint.y = ((position.y + pos.y) / 2);
+				midPoint.z = ((position.z + pos.z) / 2);
+				goto(midPoint);
+				wait(1);
+				goto(pos, 0, 1);
+				break;
+			}
+			else wait(2);
+			tries++;
+		}
+		errmode(1);
+		break;
+	}
+}
+void object::temperatureGuard()        //land if temperature is to high
+{
+	point loc;
+	int counter;
+	
+	if(temperature > 0.7) 
+	{
+		jet(0);
+		
+		while(topo(position) < 0)         //find somewhere to land
+		{                                                         
+			message("Debug - temperatureGuard() active");
+			counter = 0;
+			while(counter < 36)        //part made by sclover@abac.com
+			{
+				loc.x = (cos(orientation) * 20.0) + position.x;
+				loc.y = (sin(orientation) * 20.0) + position.y;
+				loc.z = position.z + 5.0;
+				
+				if(topo(loc) >= -0.7)
+				{
+					move(20);
+					break;
+				}
+				turn(10);
+				counter++;
+			}
+			
+			if(topo(position) >= 0)
+			{
+				break;
+			}
+			motor(1, 1);
+			wait(2);
+		}
+		
+		motor(0, 0);        //stop and land
+		jet( -1 );
+		
+	}
+}

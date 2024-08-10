@@ -1,0 +1,250 @@
+//A program that handles BlackBox search missions, as well as OrgaMatter, TNT and keys
+extern void object::ObjectGrabAndMove()
+{
+	int orgaCount = 3; // how many OrgaMatter is needed on board?
+	int blackboxCount = 1; // as above but for BlackBox
+	
+	object box,ship,matter,lab,tnt;
+	ship = radar(SpaceShip);
+	box = radar(BlackBox);
+	tnt = radar(TNT);
+	matter = radar(OrgaMatter);
+	lab = radar(AutoLab);
+	int boxesAtShip = CountObjectsOnShip(ship,BlackBox);
+	int OMAtShip = CountObjectsOnShip(ship,OrgaMatter);
+	int[] keyList;
+	keyList[0] = KeyA;
+	keyList[1] = KeyB;
+	keyList[2] = KeyC;
+	keyList[3] = KeyD;
+	object key = radar(keyList);
+	
+	if (ship == null and box != null) //trying to sort out edge case first, ship is not on the map
+	{
+		message("No ship fount but BlackBox is present, be ready to steer the bot once it has BB.");
+		trygoto(box.position);
+		grab();
+		message("BlackBox in claw, switching to manual.");
+	}
+	else if (load != null && load.category == BlackBox) //BB in claw
+	{
+		trygoto(space(ship.position));
+		drop();
+	}
+	else if((matter != null and box == null and ship != null) or (box != null and distance(ship.position,box.position) < 10) or boxesAtShip == blackboxCount) //if BB doesen't exist or is already aboard the ship in a given amount, bot will handle OrgaMatter research/hauling
+	{
+		message("BlackBox does not exist or is already on board in given amount, going for OrgaMatter.");
+		
+		if (lab == null or (lab != null and canResearch() == false)) //if no AutoLab available or no research is possible, use SpaceShip instead
+		{
+			message("No need/ability to research, going to gather OrgaMatter on the ship up to " + orgaCount);
+			OMToShip(orgaCount,matter,ship);
+		}
+		else
+		{
+			ResearchFunction(lab,matter);
+		}
+	}
+	else if (tnt != null and box == null and matter == null or OMAtShip == orgaCount) //no BlackBox or OrgaMatter/OrgaMatter is on board in sufficient amount, gathering explosives
+	{
+		message("No Blackbox, is TNT ok?");
+		goto(tnt.position);
+		grab();
+		goto(space(ship.position));
+		drop();
+	}
+	else if (tnt == null and box == null and matter == null and key != null) //no BB, no OrgaMatter, no TNT - time to gather keys aboard
+	{
+		message("Trying to gather a key.");
+		trygoto(key.position);
+		grab();
+		goto(space(ship.position));
+		drop();
+	}
+	else //Blackbox is on the map and not on board
+	{
+		trygoto(box.position);
+		grab();
+		goto(space(ship.position,0,10,3));
+		drop();
+		message("BlackBox is on board", DisplayInfo);
+	}
+}
+void object::OMToShip(int orgaCount, object matter, object ship)
+{
+	int i = 0;
+	object[] omList = radarall(OrgaMatter);
+	object[] matterOnShip;
+	
+	for (int j = 0; j <= sizeof(omList); j++)
+	{
+		if(j == sizeof(omList))
+		{
+			break;
+		}
+		if(distance(omList[j].position, ship.position) < 10)
+		{
+			matterOnShip[j] = omList[j];
+		}
+	}
+	message("Number of OrgaMatter on board: " + sizeof(matterOnShip));
+	while(i != orgaCount)
+	{
+		if(i >= orgaCount or sizeof(matterOnShip) >= orgaCount)
+		{
+			message("Reached the quota on the OrgaMatter.", DisplayInfo);
+			ResearchFunction(radar(AutoLab),matter);
+		}
+		else if(distance(matter.position,ship.position) > 10)
+		{
+			trygoto(matter.position);
+			grab();
+			goto(space(ship.position));
+			drop();
+			i++;
+		}
+		else
+		{
+			matter = omList[i+sizeof(matterOnShip)];
+			trygoto(matter.position);
+			grab();
+			goto(space(ship.position));
+			drop();
+			i++;
+		}
+	}
+}
+void object::ResearchFunction(object lab, object matter)
+{
+	while(canResearch() == true)
+	{
+		if (canResearch() == false)
+		{
+			break;
+		}
+		if(lab.energyCell != null and lab.energyCell.category == OrgaMatter) //AutoLab already has OrgaMatter
+		{
+			Research(lab);
+		}
+		else if(load != null && load.category == matter.category and canResearch() == true) //bot already carrying OrgaMatter
+		{
+			goto(lab.position);
+			drop();
+			Research(lab);
+		}
+		else if (load != null && load.category != matter.category and canResearch() == true) //invalid object in claw
+		{
+			goto(space(position));
+			drop();
+			goto(matter.position);
+			grab();
+			goto(lab.position);
+			drop();
+			Research(lab);
+		}
+		else if (load == null) //claw is empty
+		{
+			goto(matter.position);
+			grab();
+			goto(lab.position);
+			drop();
+			Research(lab);
+		}
+	}
+	
+}
+bool object::canResearch()
+{
+	int[] researchList;
+	researchList[0] = ResearchTarget;       
+	researchList[1] = ResearchLegged;
+	researchList[2] = ResearchOrgaShooter;
+	
+	for(int j = 0;j <= sizeof(researchList); j++)
+	{
+		if(j == sizeof(researchList)) //no research possible
+		{
+			return false;
+		}
+		if(canresearch(researchList[j]) == true and researched(researchList[j]) == false) //checks if research is available and not already done
+		{
+			message(researchList[j] + " can be started.", DisplayInfo);
+			return true;
+		}
+	}
+	return false;
+}
+void object::Research(object lab)
+{
+	int[] researchList;
+	researchList[0] = ResearchTarget;       
+	researchList[1] = ResearchLegged;
+	researchList[2] = ResearchOrgaShooter;
+	
+	for(int i = 0;i <= sizeof(researchList); i++)
+	{
+		if(i == sizeof(researchList)) //prevents going outside the array
+		{
+			break;
+		}
+		if(canresearch(researchList[i]) == true && researched(researchList[i]) == false && isbusy(lab) == false) //checks if research is available and not already done
+		{
+			research(researchList[i],lab);
+			message("Started research on " + researchList[i], DisplayInfo);
+			while(isbusy(lab) == true)
+			{
+				wait(1);
+			}
+			break;
+		}
+	}
+}
+void object::trygoto(point pos)
+{
+	errmode(0);
+	int tries = 0;
+	while (distance(position, pos) > 0) //While we are moving towards destination...
+	{
+		while (goto(pos) != 0) //How we are handling goto() errors
+		{
+			if(tries > 2)
+			{
+				point midPoint;
+				midPoint.x = ((position.x + pos.x) / 2);
+				midPoint.y = ((position.y + pos.y) / 2);
+				midPoint.z = ((position.z + pos.z) / 2);
+				goto(midPoint);
+				wait(0.5);
+				goto(pos, 0, 1);
+				break;
+			}
+			else wait(2);
+			tries++;
+		}
+		errmode(1);
+		break;
+	}
+}
+int object::CountObjectsOnShip(object ship, int objectToCount)
+{
+	if(ship != null)
+	{
+		object[] objectList = radarall(objectToCount);
+		object[] objectList2;
+		
+		for (int i = 0; i <= sizeof(objectList); i++)
+		{
+			if(i == sizeof(objectList))
+			{
+				break;
+			}
+			if(distance(objectList[i].position,ship.position) < 10)
+			{
+				objectList2[i] = objectList[i];
+			}
+		}
+		int finalBBAmount = sizeof(objectList2);
+		return finalBBAmount;
+	}
+	return 0;
+}

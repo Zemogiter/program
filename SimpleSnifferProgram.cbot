@@ -1,0 +1,151 @@
+extern void object::SimpleSnifferProgram()
+{
+	bool goHome = false; // set to false if you dont want the sniffer to return to its original position
+	
+	point orgPosition = position;
+	PowerFlagHandler(); // uses green flags
+	wait(1);
+	TitaniumFlagHandler(); // uses red flags
+	wait(1);
+	UraniumFlagHandler(); // uses yellow flags
+	wait(1);
+	message("All handlers completed, spots are ready to be built on.", DisplayInfo);
+	if(goHome == true)
+	{
+		goto(orgPosition);
+	}
+}
+void object::PowerFlagHandler()
+{
+	if ((radar(PowerStation) != null and radar(PowerPlant) != null) or sizeof(radarall(PowerSpot)) >= 2)
+	{
+		message("Skipping power source sniffing, we already have PowerPlant and PowerStation available or the spots are here.");
+		return; 
+	}
+	else
+	{
+		object Flag = radar(GreenFlag);
+		goto(Flag.position);
+		move(3);
+		sniff();
+		wait(1);
+		object spotInFront = radar(PowerSpot,0,45,0,6);
+		SniffingLoop(spotInFront,Flag);
+	}
+}
+void object::TitaniumFlagHandler()
+{
+	object searchCenter = radar(Converter);
+	object[] cubes;
+	if (searchCenter != null)
+	{
+		cubes = searchall(Titanium,searchCenter.position,0,20);
+	}
+	int cubesCount = sizeof(cubes);
+	
+	if (radar(TitaniumSpot) != null or (radar(Derrick) != null and cubesCount > 1)) //we're making a assumption that having sufficient ammount of Titanium next to Converter = having a Derrick mining titanium already
+	{
+		message("Skipping Titanium source sniffing, we already have underground Titanium source available.");
+		return;
+	}
+	else
+	{
+		object Flag = radar(RedFlag);
+		if(Flag != null)
+		{
+			goto(Flag.position);
+			move(3);
+			sniff();
+			wait(1);
+			object spotInFront = radar(TitaniumSpot,0,45,0,6);
+			SniffingLoop(spotInFront,Flag);
+		}
+		else
+		{
+			message("Red flag not found, skipping Titanium search", DisplayWarning);
+		}
+	}
+}
+void object::UraniumFlagHandler()
+{
+	object searchCenter = radar(NuclearPlant);
+	object searchCenter2 = radar(BotFactory);
+	object[] cells,cells2;
+	
+	if(searchCenter != null)
+	{
+		cells = searchall(NuclearCell,searchCenter.position,0,20,1);
+	}
+	if(searchCenter2 != null)
+	{
+		cells2 = searchall(NuclearCell,searchCenter2.position,0,20,1);
+	}
+	int cubesCount = sizeof(cells);
+	int cubesCount2 = sizeof(cells2);
+	
+	if (radar(UraniumSpot) != null or ((searchCenter != null and cubesCount > 1) or (searchCenter2 != null and cubesCount2 > 1))) //we're making a assumption that having sufficient ammount of NuclearCells next to NuclearPlant/BotFactory = having a Derrick mining uranium already
+	{
+		message("Skipping Uranium source sniffing, we already have underground Uranium source available.");
+		return;
+	}
+	else
+	{
+		object Flag = radar(YellowFlag);
+		if(Flag != null)
+		{
+			goto(Flag.position);
+			    move(3);
+			    sniff();
+			    wait(1);
+			    object spotInFront = radar(UraniumSpot,0,45,0,6);
+			    SniffingLoop(spotInFront,Flag);
+		}
+		else
+		{
+			message("Yellow flag not found, skipping Uranium search", DisplayWarning);
+		}
+	}
+}
+void object::SniffingLoop(object spotInFront, object Flag)
+{
+	if (spotInFront == null)
+	{
+		while(radar(spotInFront.category,0,45,0,6) != null) // repeat until spot is found
+		{
+			message(spotInFront.category + " not found. Correcting sniffer's position.");
+			turn(180);
+			move(6);
+			sniff();
+			wait(1);
+			message(spotInFront.category + " not found. Correcting sniffer's position.");
+			turn(180);
+			move(3);
+			turn(90); // switching to another axis
+			move(3);
+			sniff();
+			wait(1);
+			message(spotInFront.category + " not found. Correcting sniffer's position.");
+			turn(180);
+			move(6);
+			sniff();
+			wait(1);
+			message(spotInFront.category + " not found. Correcting sniffer's position.");
+		}
+	}
+	else if (spotInFront != null and Flag.category == GreenFlag or radar(PowerSpot) != null or sizeof(radarall(PowerSpot)) > 1)
+	{
+		message("Spot for first power facility found, now searching for the second");
+		object newFlag = radar(GreenFlag,0,360,0,1000,-1); // searching for the furthest away flag
+		point midPoint; // a point in the middle between flags, we will put the second green marker around here
+		midPoint.x = ((position.x + newFlag.position.x) / 2);
+		midPoint.y = ((position.y + newFlag.position.y) / 2);
+		midPoint.z = ((position.z + newFlag.position.z) / 2);
+		goto(midPoint);
+		wait(1);
+		SniffingLoop(spotInFront,newFlag);
+	}
+	else
+	{
+		return;
+	}
+}

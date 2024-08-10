@@ -1,0 +1,126 @@
+extern void object::TechInPrison( )
+{
+	point  MyPos0; // own starting position;
+	point  zoneC; // middle of the zone
+	float  zoneR; // radius of the zone
+	object MyCmdr; // Player character
+	object MyShip;  // spaceship
+	point  MyCmdrPos0; // Player's starting position
+	int   errcode;
+	
+	errmode(0);  // dont's break in case of error
+	while ( ismovie() != 0 )  wait(1); // wait untill the cutscene is over
+	
+	MyPos0 = position;
+	MyShip = radar(SpaceShip);
+	MyCmdr = radar(Me);
+	MyCmdrPos0 = MyCmdr.position;
+	zoneC = MyPos0;
+	zoneR = 10;
+	
+	wait(2);
+	motor(0.4,0.4); // go slowly forward
+	while (true) 
+	{
+		// How far is the ship?
+		if ( distance(position, MyShip.position) < 90 ) 
+		{
+			goto(space(MyShip.position,0,6,2)); // TechWidth=1.75?
+			zoneC = MyShip.position; zoneR = 6;
+			while (true) 
+			{
+				WalkInCircle(zoneC, zoneR);
+			}
+		}
+		// Where is the boss?
+		if ( distance(position, MyCmdr.position) > 10 ) 
+		{
+			FollowCommander(MyCmdr);
+		}
+		else 
+		{
+			WalkInCircle(zoneC, zoneR);
+		}
+	}
+}
+
+void object::FollowCommander(object MyCmdr)
+{
+	float dis = distance(position,MyCmdr.position);
+	float dif = MyCmdr.position.z-position.z;
+	float ang = asin(dif/dis);
+	
+	if(dis > 10)                           // if too far away from ally
+	{
+		jet(1-(ang/-20));
+		float dir = direction(MyCmdr.position);
+		motor(1-dir/22.5,1+dir/22.5);             // move in closer
+	}
+	else                                          // otherwise too close
+	{ 
+		motor(dis/10-1, dis/10-1);  // back up a little
+		if(topo(position) > 0)                    // if not over water
+		jet(-1);                                  // then land to conserve energy/minimize heat
+	}
+}
+
+void object::WalkInCircle(point zoneC, float zoneR)
+// based on ANTicp.txt from the COLOBOT scene 302 (Amnesia on Tropica)
+{
+	point  lastPos; // last position (for obstacle detection)
+	float  r;    // random value
+	object item;   // any obstacle
+	
+	lastPos = position; // remember starting point
+	// check the obstacle before walking into it
+	if ((item=radar(0, 0, 90, 0, 5)) != null) 
+	{
+		if (direction(item.position) > 0) motor(0.7,0); else motor(0,0.7);
+		do
+		wait(0.2);
+		while (direction(item.position) < 45 and direction(item.position) > -45);
+	}
+	if (distance(position, zoneC) > zoneR or topo(position)<0) 
+	{
+		// if outside patrolled zone or went into the water
+		motor(0, 0);
+		wait(1);
+		motor(-0.4, -0.4); // slowly reverses
+		wait(0.6);
+		turn(direction(zoneC));
+		motor(0.4, 0.4);
+		do 
+		{
+			lastPos = position;
+			wait(0.5); // still moves towarts the middle of the zone
+			if (distance(lastPos, position) < 0.2) 
+			{
+				// something is blocking turn around and try again
+				turn(rand()*360-180);
+				motor(1, 1);
+				wait(1);
+				turn(direction(zoneC));
+			}
+		} 
+		while (distance2d(position, zoneC) > zoneR or topo(position)<0);
+	}
+	else 
+	{
+		motor(0.4,0.4); wait(0.5);
+		// is inside patrolled zone
+		if (distance(lastPos, position) < 0.2) 
+		{
+			// something is blocking turn around and try again
+			turn(rand()*360-180); motor(1, 1); wait(1);
+		}
+		// turns randomly
+		r = rand();
+		if (r > 0.6)
+		{ motor(0.4, 0.2); wait(rand()*3); motor (0.4, 0.4); }
+		if (r < 0.4)
+		{ motor(0.2, 0.4); wait(rand()*3); motor (0.4, 0.4); }
+		wait(0.7); 
+		if (rand() > 0.2)
+		{ motor(0, 0); wait(2+rand()*4); }
+	}
+}

@@ -1,0 +1,252 @@
+extern void object::CubesToSpots()
+{
+	float triggerValue = 0.3; // bot will move to recharge batteries/shields once they reach this level
+	
+	int[] spotList;
+	spotList[0] = PowerSpot;
+	spotList[1] = TitaniumSpot;
+	spotList[2] = UraniumSpot;
+	spotList[3] = KeyASpot;
+	spotList[4] = KeyBSpot;
+	spotList[5] = KeyCSpot;
+	spotList[6] = KeyDSpot;
+	if(canbuild(RadarStation) == true) // in user levels, this is usually used to indicate RS should be there to finish the mission
+	{
+		spotList[7] = WayPoint;
+	}
+	object[] spotList2 = radarall(spotList);
+	object[] cubeList = radarall(Titanium);
+	
+	if(load != null && load.category != Titanium)
+	{
+		drop();
+	}
+	else if(load != null && load.category == Titanium)
+	{
+		message("Bot has the cube already, not searching for one.");
+	}
+	
+	for(int i = 0; i <= sizeof(spotList2); i++)
+	{
+		Mainteneance(triggerValue);
+		object spot = SelectNextSpot(spotList2);
+		
+		if(spot == null)
+		{
+			break;
+		}
+		else
+		{
+			if(load == null)
+			{
+				object cube = SelectNextCube(cubeList, spot);
+				
+				if(cube == null)
+				{
+					break;
+				}
+				goto(cube.position);
+				errmode(0);
+				if(grab() != 0) //if the cube was taken away/destroyed, looks for the nearest one
+				{
+					 cube = radar(Titanium);
+					 goto(cube.position);
+					 grab();
+				}
+				errmode(1);
+			}
+			goto(spot.position);
+			wait(1); //need to wait after goto, otherwise move throws an error
+			move(-1.5); //making sure we drop the cube exactly at the spot
+			drop();
+			message("Dropped titanium cube on " + spot.category + " at " + spot.position);
+		}
+	}
+}
+object object::SelectNextCube(object[] cubeList,object spot)
+{
+	for(int i = 0; i <= sizeof(cubeList); i++)
+	{
+		if(radar(Titanium) == null)
+		{
+			message("No cube found.", DisplayError);
+			break;
+		}
+		if(i == sizeof(cubeList) or spot == null)
+		{
+			message("All cubes are assigned to spots. More cubes required.", DisplayError);
+			return null;
+		}
+		// do not uncomment lines in if blocks below unless for debugging purpouses
+		if(spot.category == PowerSpot && (radar(TitaniumSpot) != null && distance(cubeList[i].position, radar(TitaniumSpot).position) < 4) or (radar(UraniumSpot) != null && distance(cubeList[i].position, radar(UraniumSpot).position) < 4 ))
+		{
+			/*produce(cubeList[i].position, cubeList[i].orientation, GreenFlag);
+			message("DEBUG - Cube is to be deliverd to PowerSpot but it's already at Titanium or Uranium spot");*/
+			continue;
+		}
+		else if(spot.category == TitaniumSpot && (radar(PowerSpot) != null && distance(cubeList[i].position, radar(PowerSpot).position) < 4) or (radar(UraniumSpot) != null && distance(cubeList[i].position, radar(UraniumSpot).position) < 4 ))
+		{
+			/*produce(cubeList[i].position, cubeList[i].orientation, RedFlag);
+			message("DEBUG - Cube is to be deliverd to Titanium but it's already at Power or Uranium spot");*/
+			continue;
+		}
+		else if(spot.category == UraniumSpot && (radar(TitaniumSpot) != null && distance(cubeList[i].position, radar(TitaniumSpot).position) < 4) or (radar(PowerSpot) != null && distance(cubeList[i].position, radar(PowerSpot).position) < 4 ) )
+		{
+			/*produce(cubeList[i].position, cubeList[i].orientation, YellowFlag);
+			message("DEBUG - Cube is to be deliverd to UraniumSpot but it's already at Titanium or Power spot");*/
+			continue;
+		}
+		if(spot != null and distance(cubeList[i].position,spot.position) > 4 and distance(cubeList[i].position,position) > 4) // if spots exist on map, distance between a spot and cube are big enough and cube isn't already placed at a different spot, it will be our next target
+		{
+			return cubeList[i];
+		}
+	}
+	return null;
+}
+object object::SelectNextSpot(object[] spotList)
+{
+	for(int i = 0; i <= sizeof(spotList); i++)
+	{
+		if(i == sizeof(spotList) and spotList != null)
+		{
+			message("All spots have cubes next to them, or not enough cubes for all the spots on map. Ensure at least " + sizeof(spotList) + " cubes are available.", DisplayWarning);
+			return null;
+		}
+		else if(sizeof(spotList) == 0)
+		{
+			message("No spots found on the map.", DisplayWarning);
+			return null;
+		}
+		if(search(Titanium,spotList[i].position,0,2) == null)
+		{
+			return spotList[i];
+		}
+		else
+		{
+			message("All spots have cubes next to them, or not enough cubes for all the spots on map. Ensure at least " + sizeof(spotList) + " cubes are available.", DisplayWarning);
+			break;
+		}
+	}
+	return null;
+}
+void object::Mainteneance(float triggerValue)
+{
+	int list[], i;
+	object power,repair;
+	
+	i = 0;
+	list[i++] = PowerStation;
+	list[i++] = PowerCaptor;
+	
+	errmode(0);
+	
+	power = radar(list);
+	
+	if(power != null && energyCell.energyLevel < triggerValue && energyCell.category != NuclearCell)
+	{
+		message("Battery low, going to recharge facility", DisplayInfo);
+		trygoto(power.position);
+		while(energyCell.energyLevel < 1)
+		{
+			wait(1);
+		}
+	}
+	else if (energyCell.energyLevel < triggerValue && power == null && energyCell.category == PowerCell) //checking if we have power cell so that we wont display this error needlessly
+	{
+		message("Power Station/Captor not found.", DisplayError);
+	}
+	else if (energyCell.energyLevel < triggerValue && canbuild(PowerStation) == false && canbuild(PowerCaptor) == false) //can't do canbuild(list), it expects a int value (not list) or category name
+	{
+		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+	}
+	
+	repair = radar(RepairCenter);
+	
+	if(shieldLevel < 0.5)
+	{
+		message("Structural integritty low, going to Repair Center", DisplayInfo);
+		goto(repair.position);
+		while(shieldLevel < 1)
+		{
+			wait(1);
+		}
+	}
+	else if (shieldLevel < 0.5 && radar(repair.category) == null)
+	{
+		message("Power Station/Captor not found.", DisplayError);
+	}
+	else if (shieldLevel < 0.5 && canbuild(repair.category) == false)
+	{
+		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+	}
+	
+	errmode(1);
+}
+void object::trygoto(point pos)
+{
+	errmode(0);
+	int tries = 0;
+	while (distance(position, pos) > 0) //While we are moving towards destination...
+	{
+		temperatureGuard(); //...we're checking if the flying bot's engine is overheating
+		while (goto(pos) != 0) //How we are handling goto() errors
+		{
+			if(tries > 2)
+			{
+				point midPoint;
+				midPoint.x = ((position.x + pos.x) / 2);
+				midPoint.y = ((position.y + pos.y) / 2);
+				midPoint.z = ((position.z + pos.z) / 2);
+				goto(midPoint);
+				wait(1);
+				goto(pos, 0, 1);
+				break;
+			}
+			else wait(2);
+			tries++;
+		}
+		errmode(1);
+		break;
+	}
+}
+void object::temperatureGuard()        //land if temperature is to high
+{
+	point loc;
+	int counter;
+	
+	if(temperature > 0.7) 
+	{
+		message("Debug - temperatureGuard() active");
+		jet(0);
+		
+		while(topo(position) < 0)         //find somewhere to land
+		{                                                         
+			counter = 0;
+			while(counter < 36)        //part made by sclover@abac.com
+			{
+				loc.x = (cos(orientation) * 20.0) + position.x;
+				loc.y = (sin(orientation) * 20.0) + position.y;
+				loc.z = position.z + 5.0;
+				
+				if(topo(loc) >= -0.7)
+				{
+					move(20);
+					break;
+				}
+				turn(10);
+				counter++;
+			}
+			
+			if(topo(position) >= 0)
+			{
+				break;
+			}
+			motor(1, 1);
+			wait(2);
+		}
+		
+		motor(0, 0);        //stop and land
+		jet( -1 );
+		
+	}
+}

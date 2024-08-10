@@ -1,0 +1,70 @@
+extern void object::BuildAtSpots()
+{
+	bool forcePowerStation = false; // set to true if you want the builder to construct another PowerStation even if you have one already
+	
+	int[] spotList;
+	spotList[0] = PowerSpot;
+	spotList[1] = TitaniumSpot;
+	spotList[2] = UraniumSpot;
+	spotList[3] = KeyASpot;
+	spotList[4] = KeyBSpot;
+	spotList[5] = KeyCSpot;
+	spotList[6] = KeyDSpot;
+	object[] spotList2 = radarall(spotList);
+	
+	for(int i = 0;i <= sizeof(spotList2);i++)
+	{
+		if(i != sizeof(spotList2) and search(Titanium,spotList2[i].position,0,4) != null)
+		{
+			if(spotList2[i].category == PowerSpot && radar(PowerStation) == null && canbuild(PowerStation) == true)
+			{
+				message("Going to " + spotList2[i].category + ", attempting to build PowerStation");
+				goto(space(spotList2[i].position));
+				PositionAjustment(spotList2[i]);
+				build(PowerStation);
+			}
+			else if(spotList2[i].category == PowerSpot && radar(PowerStation) != null && canbuild(PowerPlant) == true)
+			{
+				if(forcePowerStation == true)
+				{
+					message("Going to " + spotList2[i].category + ", attempting to build another Power Station, since forcePowerStation is enabled.");
+				}
+				else
+				{
+					message("Going to " + spotList2[i].category + ", attempting to build PowerPlant");
+				}
+				goto(space(spotList2[i].position));
+				PositionAjustment(spotList2[i]);
+				if (forcePowerStation == true)
+				{
+					build(PowerStation);
+				}
+				else
+				{
+					build(PowerPlant);
+				}
+				
+			}
+			else
+			{
+				message("Going to " + spotList2[i].category + ", attempting to build Derrick");
+				goto(space(spotList2[i].position));
+				PositionAjustment(spotList2[i]);
+				build(Derrick);
+			}
+		}
+		else
+		{
+			message("No spots to build on or all building jobs were complete.", DisplayInfo);
+			break;
+		}
+	}
+}
+void object::PositionAjustment(object spot)
+{
+	turn(direction(spot.position));
+	while(distance(position, spot.position) > 4)
+	{
+		move(2);
+	}
+}

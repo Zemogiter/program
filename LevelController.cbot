@@ -1,0 +1,193 @@
+extern void object::New()
+{
+	file handle();
+	handle.open("BotList.txt", "w");
+	
+	int[] list;
+	int i = 0;
+	
+	list[i++] = PracticeBot;
+	list[i++] = WheeledGrabber;
+	list[i++] = TrackedGrabber;
+	list[i++] = WingedGrabber;
+	list[i++] = LeggedGrabber;
+	list[i++] = WheeledSniffer;
+	list[i++] = TrackedSniffer;
+	list[i++] = WingedSniffer;
+	list[i++] = LeggedSniffer;
+	list[i++] = WheeledShooter;
+	list[i++] = TrackedShooter;
+	list[i++] = WingedShooter;
+	list[i++] = LeggedShooter;
+	list[i++] = WheeledOrgaShooter;
+	list[i++] = TrackedOrgaShooter;
+	list[i++] = WingedOrgaShooter;
+	list[i++] = LeggedOrgaShooter;
+	list[i++] = Recycler;
+	list[i++] = Thumper;
+	list[i++] = Shielder;
+	list[i++] = PhazerShooter;
+	list[i++] = WheeledBuilder;
+	list[i++] = TrackedBuilder;
+	list[i++] = WingedBuilder;
+	list[i++] = LeggedBuilder;
+	
+	object[] botList = radarall(list);
+	
+	for(int j = 0;j < sizeof(botList);j++)
+	{
+		int cat = botList[j].category;
+		point pos = botList[j].position;
+		float orientation = botList[j].orientation;
+		float energy = botList[j].energyLevel;
+		float shieldL = botList[j].shieldLevel;
+		object cell = botList[j].energyCell;
+		object load = botList[j].load;
+		
+		if (load != null)
+		{
+			load = botList[j].load;
+			handle.writeln("Category: " + cat + "Position: " + pos + "Orientation: " + orientation + "Energy: " + energy + "Shield: " + shieldL + "Cell: " + cell + "Load: " + load);
+		}
+		else
+		{
+			handle.writeln("Category: " + cat + "Position: " + pos + "Orientation: " + orientation + "Energy: " + energy + "Shield: " + shieldL + "Cell: " + cell);
+		}
+	}
+	handle.close();
+	
+	// handling buildings
+	file handle2();
+	handle2.open("BuildingList.txt", "w");
+	
+	int[] list2;
+	i = 0;
+	
+	list2[i++] = BotFactory;
+	list2[i++] = ResearchCenter;
+	list2[i++] = ExchangePost;
+	list2[i++] = RadarStation;
+	list2[i++] = RepairCenter;
+	list2[i++] = DefenseTower;
+	list2[i++] = AutoLab;
+	list2[i++] = PowerStation;
+	list2[i++] = PowerPlant;
+	list2[i++] = Converter;
+	list2[i++] = Derrick;
+	list2[i++] = PowerCaptor;
+	list2[i++] = NuclearPlant;
+	
+	object[] buildingList = radarall(list2);
+	
+	for(int j = 0;j < sizeof(buildingList);j++)
+	{
+		int cat = buildingList[j].category;
+		point pos = buildingList[j].position;
+		float orientation = buildingList[j].orientation;
+		float energy = buildingList[j].energyLevel;
+		float shieldL = buildingList[j].shieldLevel;
+		object cell;
+		if (buildingList[j].energyCell != null)
+		{
+			cell = buildingList[j].energyCell;
+			handle2.writeln("Category: " + cat + "Position: " + pos + "Orientation: " + orientation + "Energy: " + energy + "Shield: " + shieldL + "Cell: " + cell);
+		}
+		else
+		{
+			handle2.writeln("Category: " + cat + "Position: " + pos + "Orientation: " + orientation + "Energy: " + energy + "Shield: " + shieldL);
+		}
+		
+	}
+	handle2.close();
+	
+	//handling objects that can be grabbed
+	file handle3();
+	handle3.open("ObjectList.txt", "w");
+	
+	int[] list3;
+	i = 0;
+	
+	list3[i++] = TitaniumOre;
+	list3[i++] = UraniumOre;
+	list3[i++] = Titanium;
+	list3[i++] = PowerCell;
+	list3[i++] = NuclearCell;
+	list3[i++] = OrgaMatter;
+	list3[i++] = BlackBox;
+	list3[i++] = TNT;
+	list3[i++] = KeyA;
+	list3[i++] = KeyB;
+	list3[i++] = KeyC;
+	list3[i++] = KeyD;
+	
+	object[] objectList = radarall(list3);
+	
+	for(int j = 0;j < sizeof(objectList);j++)
+	{
+		int cat = objectList[j].category;
+		point pos = objectList[j].position;
+		float orientation = objectList[j].orientation;
+		float energy = objectList[j].energyLevel;
+		
+		handle3.writeln("Category: " + cat + "Position: " + pos + "Orientation: " + orientation + "Energy: " + energy);
+	}
+	handle3.close();
+	
+	//handling aliens
+	//file handle4();
+	//handle4.open("AlienList.txt", "w");
+	//
+	//int[] list4;
+	//i = 0;
+	//
+	//list4[i++] = AlienQueen;
+	//list4[i++] = AlienEgg;
+	//list4[i++] = AlienAnt;
+	//list4[i++] = AlienSpider;
+	//list4[i++] = AlienWasp;
+	//list4[i++] = AlienWorm;
+	//
+	//object[] alienList = radarall(list4);
+	//
+	//for(int j = 0;j < sizeof(alienList);j++)
+	//{
+	//    int cat = alienList[j].category;
+	//    point pos = alienList[j].position;
+	//    float orientation = alienList[j].orientation;
+	//
+	//    handle4.writeln("Category: " + cat + "Position: " + pos + "Orientation: " + orientation);
+	//}
+	//handle4.close();
+	
+	//handling other objects
+	file handle5();
+	handle5.open("MiscList.txt", "w");
+	
+	int[] list5;
+	i = 0;
+	
+	list5[i++] = BlueFlag;
+	list5[i++] = RedFlag;
+	list5[i++] = GreenFlag;
+	list5[i++] = YellowFlag;
+	list5[i++] = VioletFlag;
+	list5[i++] = WayPoint;
+	list5[i++] = Target2;
+	list5[i++] = PowerSpot;
+	list5[i++] = TitaniumSpot;
+	list5[i++] = UraniumSpot;
+	
+	object[] miscList = radarall(list5);
+	
+	for(int j = 0;j < sizeof(miscList);j++)
+	{
+		int cat = miscList[j].category;
+		point pos = miscList[j].position;
+		float orientation = miscList[j].orientation;
+		
+		handle5.writeln("Category: " + cat + "Position: " + pos + "Orientation: " + orientation);
+	}
+	handle5.close();
+	
+	
+}

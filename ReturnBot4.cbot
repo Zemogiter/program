@@ -1,0 +1,203 @@
+extern void object::ReturnBot4() //A program made for missions with x power cells as requirement, makes power cells up to given number
+{
+	int target = 2; //change if you need different number of cells
+	bool toShip = false; //change to false if you dont want power cells deliverd to SpaceShip
+	float triggerValue = 0.4;
+	
+	object make = radar(PowerPlant);
+	object ship = radar(SpaceShip);
+	
+	PowerPlantHandler(make);
+	if(load != null && load.category != Titanium) //unusable item in claw
+	{
+		goto(space());
+		drop();
+		ManufacturePowerCell(false,make,ship,target,toShip,triggerValue);
+	}
+	else if(load != null && load.category == Titanium) //Titanium cube in claw
+	{
+		ManufacturePowerCell(true,make,ship,target,toShip,triggerValue);
+	}
+	else //nothing in claw
+	{
+		ManufacturePowerCell(false,make,ship,target,toShip,triggerValue);
+	}
+}
+void object::Mainteneance(float triggerValue)
+{
+	int list[], i;
+	object power,repair;
+	
+	i = 0;
+	list[i++] = PowerStation;
+	list[i++] = PowerCaptor;
+	
+	errmode(0);
+	
+	power = radar(list);
+	
+	if(power != null && energyCell.energyLevel < triggerValue && energyCell.category != NuclearCell)
+	{
+		message("Battery low, going to recharge facility", DisplayInfo);
+		goto(power.position);
+		while(energyCell.energyLevel < 1)
+		{
+			wait(1);
+		}
+	}
+	else if (energyCell.energyLevel < triggerValue && power == null && energyCell.category == PowerCell) //checking if we have power cell so that we wont display this error needlessly
+	{
+		message("Power Station/Captor not found.", DisplayError);
+	}
+	else if (energyCell.energyLevel < triggerValue && canbuild(PowerStation) == false && canbuild(PowerCaptor) == false) //can't do canbuild(list), it expects a int value (not list) or category name
+	{
+		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+	}
+	
+	repair = radar(RepairCenter);
+	
+	if(shieldLevel < 0.5)
+	{
+		message("Structural integritty low, going to Repair Center", DisplayInfo);
+		goto(repair.position);
+		while(shieldLevel < 1)
+		{
+			wait(1);
+		}
+	}
+	else if (shieldLevel < 0.5 && radar(repair.category) == null)
+	{
+		message("Power Station/Captor not found.", DisplayError);
+	}
+	else if (shieldLevel < 0.5 && canbuild(repair.category) == false)
+	{
+		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+	}
+	
+	errmode(1);
+}
+void object::ManufacturePowerCell(bool cubeInClaw, object make, object ship, int target, bool toShip, float triggerValue)
+{
+	object cube;
+	object[] cellList = radarall(PowerCell);
+	object[] chargedCellList;
+	
+	for(int i = 0;i < sizeof(cellList);i++)
+	{
+		if(cellList[i].energyLevel == 1)
+		{
+			chargedCellList[i] = cellList[i]; 
+		}
+	}
+	
+	int cellCount = sizeof(chargedCellList);
+	
+	if(cellCount >= target)
+	{
+		message("We have reached the requied quota on Power Cells, halting program.", DisplayInfo);
+	}
+	
+	while(cellCount < target)
+	{
+		//Mainteneance(triggerValue);
+		if(cubeInClaw == false)
+		{
+			while (radar(Titanium) == null)
+			{
+				message("No titanium cube found for power cell production, waiting.");
+				wait(20);
+			}
+			cube = radar(Titanium);
+			goto(cube.position);
+			grab();
+			Mainteneance(triggerValue);
+			goto(make.position);
+			PowerPlantHandler(make);
+			drop();
+			wait(2); //waitiing so that grabber wont take the cube before PowerPlant starts
+			while(isbusy(make))
+			{
+				wait(1);
+			}
+			grab();
+			DeliverPowerCell(ship,toShip, triggerValue);
+			cubeInClaw = false;
+		}
+		else
+		{
+			Mainteneance(triggerValue);
+			goto(make.position);
+			PowerPlantHandler(make);
+			drop();
+			wait(2); //waitiing so that grabber wont take the cube before PowerPlant starts
+			while(isbusy(make))
+			{
+				wait(1);
+			}
+			grab();
+			DeliverPowerCell(ship,toShip, triggerValue);
+		}
+		if(cellCount >= target)
+		{
+			break;
+		}
+	}
+}
+void object::PowerPlantHandler(object make) //handles a scenario where PowerPlant's output is not empty
+{
+	if(make.energyCell != null && load != null) //if there's something in PowerPlant and bot's claw
+	{
+		goto(space());
+		drop();
+		goto(make.position);
+		grab();
+		goto(space());
+		drop();
+		object cube = radar(Titanium);
+		while (cube == null)
+		{
+			if(cube !=null)
+			{
+				message("Titanium cube found, starting.", DisplayInfo);
+			}
+			wait(1);
+		}
+		goto(cube.position);
+		grab();
+		goto(make.position);
+	}
+	else if(make.energyCell != null && load == null) //if there's something in PowerPlant but not in bot's claw
+	{
+		goto(make.position);
+		grab();
+		goto(space());
+		drop();
+		object cube = radar(Titanium);
+		while (cube == null)
+		{
+			if(cube !=null)
+			{
+				message("Titancube found, starting.", DisplayInfo);
+			}
+			wait(1);
+		}
+		goto(cube.position);
+		grab();
+		goto(make.position);
+	}
+}
+void object::DeliverPowerCell(object ship,bool toShip, float triggerValue)
+{
+	Mainteneance(triggerValue);
+	if(ship != null && toShip == true)
+	{
+		goto(space(ship.position,0,15,2));
+		turn(direction(ship.position));
+		//move(3); //watch this space
+	}
+	else
+	{
+		goto(space());
+	}
+	drop();
+}

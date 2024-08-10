@@ -1,0 +1,189 @@
+extern void object::Researcher()
+{
+	bool continiousMode = true; // if true, grabber will wait at ResearchCenter until it finishes researching, then grab the battery and start the cycle again
+	
+	object[] batteryList = radarall(PowerCell);
+	int list[], i;
+	object recharge;
+	i = 0;
+	list[i++] = PowerStation;
+	list[i++] = PowerCaptor;
+	recharge = radar(list);
+	object center = radar(ResearchCenter);
+	object make = radar(PowerPlant);
+	object cube = radar(Titanium);
+	
+	if(load != null && load.category != PowerCell) //invalid object in claw
+	{
+		goto(space());
+		drop();
+	}
+	while (radar(ResearchCenter) == null) //waiting for center to be ready
+	{
+		message("No Research Center found, standing by.");
+		wait(30);
+	}
+	if(center.energyCell == null) //handling a Research Center with no Power Cell
+	{
+		if(load != null && load.category == PowerCell && load.energyLevel == 1) //grabber already has a full battery in claw
+		{
+			message("Bot has PowerCell in claw, moving to ResearchCenter");
+			goto(center.position);
+			drop();
+			Research(continiousMode);
+		}
+		else if(load != null && load.category == PowerCell && load.energyLevel < 1 && recharge != null) //battery in claw is not full, PowerStation exists
+		{
+			message("Bot has PowerCell in claw, moving to recharge");
+			goto(recharge.position);
+			while(load.energyLevel < 1)
+			{
+				wait(1);
+			}
+			goto(center.position);
+			drop();
+			Research(continiousMode);
+		}
+		else if(load != null && load.category == PowerCell && load.energyLevel < 1 && recharge == null) //battery in claw is not full, no PowerStation on map
+		{
+			goto(space());
+			drop();
+			goto(SearchForCell(batteryList));
+			grab();
+			goto(center.position);
+			drop();
+			Research(continiousMode);
+		}
+		else // finally, grabber searches for a full PowerCell on the map, or makes one if not found
+		{
+			for(int i = 0;i <= sizeof(batteryList); i++) 
+			{
+				errmode(0);
+				if(sizeof(batteryList) == 0) //no batteries at all on the map, grabber moves to make one
+				{
+					goto(cube.position);
+					grab();
+					goto(make.position);
+					drop();
+					wait(2);
+					while(isbusy(make))
+					{
+						wait(1);
+					}
+					grab();
+					goto(center.position);
+					drop();
+					Research(continiousMode);
+				}
+				if(batteryList[i].energyLevel < 1 && recharge != null) //the closest found PowerCell is not full
+				{
+					goto(batteryList[i].position);
+					grab();
+					goto(recharge.position);
+					while(load.energyLevel < 1)
+					{
+						wait(1);
+					}
+					goto(center.position);
+					drop();
+					Research(continiousMode);
+				}
+				else if(batteryList[i].energyLevel == 1) //the closest found PowerCell is full
+				{
+					goto(batteryList[i].position);
+					grab();
+					goto(center.position);
+					drop();
+					Research(continiousMode);
+				}
+				break;
+				errmode(1);
+			}
+		}
+		
+	}
+	else if (center.energyCell.energyLevel < 1) //PowerCell already in place but not full
+	{
+		goto(center.position);
+		grab();
+		if(recharge != null)
+		{
+			goto(recharge.position);
+			while(load.energyLevel < 1)
+			{
+				wait(1);
+			}
+		}
+		else
+		{
+			goto(space());
+			drop();
+			goto(SearchForCell(batteryList));
+			grab();
+		}
+		goto(center.position);
+		drop();
+		Research(continiousMode);
+	}
+	else //Power Cell is in place and fully charged
+	{
+		Research(continiousMode);
+	}
+	
+}
+void object::Research(bool continiousMode) //Main research function
+{
+	int[] researchList; //same order as the buttons in ResearchCenter's UI
+	int i = 0;
+	researchList[i++] = ResearchTracked;       
+	researchList[i++] = ResearchWinged;        
+	researchList[i++] = ResearchShooter;
+	researchList[i++] = ResearchDefenseTower;
+	researchList[i++] = ResearchNuclearPlant;
+	researchList[i++] = ResearchThumper;
+	researchList[i++] = ResearchShielder;
+	researchList[i++] = ResearchPhazerShooter;
+	researchList[i++] = ResearchBuilder;
+	
+	for(int j = 0;j <= sizeof(researchList); j++)
+	{
+		if(j == sizeof(researchList)) //prevents going outside the array
+		{
+			break;
+		}
+		if(canresearch(researchList[j]) == true && researched(researchList[j]) == false) //checks if research is available and not already done
+		{
+			research(researchList[j]);
+			message("Started research on " + researchList[j], DisplayInfo);
+			if(continiousMode == true && j != sizeof(researchList))
+			{
+				object center = radar(ResearchCenter,0,360,0,10);
+				while(isbusy(center) == true)
+				{
+					wait(1);
+				}
+				Researcher();
+			}
+			else
+			{
+				break;
+			}
+			
+		}
+	}
+}
+point object::SearchForCell(object[] batteryList)
+{
+	for(int i = 0; i <= sizeof(batteryList); i++)
+	{
+		if(i == sizeof(batteryList))
+		{
+			return new point(9999,9999,999);
+		}
+		if(batteryList[i].energyLevel == 1)
+		{
+			return batteryList[i].position;
+		}
+	}
+	return new point(9999,9999,999);
+}

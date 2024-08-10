@@ -1,0 +1,90 @@
+// Redesinged script copied from AlienKiller by Yenz
+// This code almost entirely copied from the AlienKiller script
+// made by Yenz. I wanted to make a simple cyborg script where
+// a bot is manually piloted, but has precision aiming. Just run
+// this script instead of hitting the fire button and the bot
+// will aim and fire once at the closest alien in front of it.
+// 
+// Now rewritten to include both pitch and roll correction
+// Reports warnings for temperature, shield and energy levels
+// in percentages.
+
+
+extern void object::RoboAim2()
+{
+	bool scrapperMode = true;
+	
+	object alien;
+	float angle;
+	int alienList[], nr;
+	
+	nr = 0;
+	
+	alienList[nr++] = AlienWasp;
+	alienList[nr++] = AlienAnt;
+	alienList[nr++] = AlienSpider;
+	alienList[nr++] = AlienWorm;
+	alienList[nr++] = AlienEgg;
+	alienList[nr++] = TargetBot;
+	if(scrapperMode == true)
+	{
+		alienList[nr++] = Titanium;
+		alienList[nr++] = PowerCell;
+		alienList[nr++] = NuclearCell;
+	}
+	
+	alien = radar(alienList,0,90,0,45);
+	if(alien != null)        //if there still is a alien left
+	{
+		if(distance(position, alien.position) < 50 and LOS(alien, distance(position,alien.position)) == true)
+		{
+			turn(direction(alien.position));    //coarse turn adjustment;
+			
+			angle = atan(((topo(alien.position)+alien.altitude)-(topo(position)+altitude))/distance2d(position, alien.position));        //determine absolute aiming angle
+			
+			// calulate and turn to adjust for roll angle
+			if(roll < 0) turn((angle-pitch)*cos(roll)*cos(90-roll));
+			else turn(-((angle-pitch)*cos(roll)*cos(90-roll)));
+			
+			aim(angle-pitch);    //aim at the target
+			
+			fire(0.1);    //kill it
+		}
+	}
+	else message("No target");
+	
+	if(temperature > 0.8) message("Engines at " + (temperature * 100) + "%");
+	if(shieldLevel < 0.2) message("Warning-Shield at " + (shieldLevel * 100) + "%");
+	if(energyCell.energyLevel < 0.2 && energyCell.category == PowerCell) message("Warning-Energy at " + (energyCell.energyLevel * 100) + "%");
+}
+bool object::LOS(object objTarget, float fltDist)
+{
+	if(objTarget == null) return false;    //if it doesn't exist you can't see it
+	ipf(10000);                            //Zip through the code AFAP
+	point pntCheck;
+	point pntScale;
+	point pntHigh;
+	point pntPosAlt;
+	float fltDistance;
+	
+	pntPosAlt = position;
+	fltDistance = distance(position, objTarget.position);
+	
+	//Calculate the change per unit... "3d slope"
+	pntScale.x = (objTarget.position.x - position.x)/fltDistance;
+	pntScale.y = (objTarget.position.y - position.y)/fltDistance;
+	pntScale.z = (objTarget.position.z - position.z)/fltDistance;
+	
+	//loop until you have reached the location of the target
+	for(int I=fltDist; I < fltDistance; I=I+fltDist)
+	{
+		pntCheck.x = pntPosAlt.x + (pntScale.x * I);
+		pntCheck.y = pntPosAlt.y + (pntScale.y * I);
+		pntCheck.z = pntPosAlt.z + (pntScale.z * I);
+		
+		//see if the "line of site" that is calculated
+		//is above or below the ground
+		if(pntCheck.z < topo(pntCheck)) return false;
+	}
+	return true;
+}

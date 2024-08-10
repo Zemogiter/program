@@ -1,0 +1,75 @@
+extern void object::ReturnBot5A() //a program for the subber, allows it to support the construction crew(TrackedBuilder, TrackedGrabber and TrackedShooter) on 1st mission on crystalium
+{
+	object builder = radar(TrackedBuilder);
+	if (builder != null) // program needs TrackedBuilder, otherwise it makes no sense
+	{
+		object grabber = search(TrackedGrabber,builder.position,0,10);
+		
+		if (grabber != null)
+		{
+			if (grabber.energyCell.energyLevel < 0.5)
+			{
+				ChargingLoop(grabber);
+			}
+			else if (grabber.load == null or grabber.load.category != Titanium)
+			{
+				message("TrackedGrabber needs Titanium cube.");
+				
+				object cube = radar(Titanium);
+				goto(cube.position);
+				grab();
+				goto(space(grabber.position));
+				drop();
+				message("Delivered Titanium cube for the grabber.");
+			}
+		}
+		
+		object shooter = search(TrackedShooter,builder.position,0,10);
+		
+		if (shooter != null)
+		{
+			if (shooter.energyCell.energyLevel < 0.5)
+			{
+				ChargingLoop(shooter);
+			}
+		}
+		if (builder.energyCell.energyLevel < 0.5)
+		{
+			ChargingLoop(builder);
+		}
+	}
+}
+void object::ChargingLoop(object bot)
+{
+	message(bot.category + " needs new power source.");
+	
+	object cell = radar(PowerCell);
+	if (distance(cell.position,bot.position) < 10)
+	{
+		object[] cellList = radarall(PowerCell);
+		for (int i = 0;i<sizeof(cellList);i++)
+		{
+			if (distance(cellList[i].position,bot.position) < 10)
+			{
+				cell = cellList[i];
+				break;
+			}
+		}
+	}
+	goto(cell.position);
+	grab();
+	if(cell.energyLevel < 1)
+	{
+		message("This one needs charging.");
+		
+		object recharge = radar(PowerStation);
+		goto(recharge.position);
+		while(load.energyLevel < 1)
+		{
+			wait(1);
+		}
+	}
+	goto(space(bot.position));
+	drop();
+	message("Delivered PowerCell for the " + bot.category);
+}

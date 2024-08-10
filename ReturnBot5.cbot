@@ -1,0 +1,31 @@
+extern void object::ReturnBot5() //another quick and dirty piece of code, this one is for the 1st mission on Crystalium. It tells the builder bot to go to the nearest waypoint that has a titanium cube on it and build RadarStation there
+{
+	object waypoint = radar(WayPoint);
+	if (search(Titanium,waypoint.position) != null)
+	{
+		RadarConstruction(waypoint);
+	}
+	else
+	{
+		object[] waypointList = radarall(WayPoint);
+		for (int i = 0;i <= sizeof(waypointList);i++)
+		{
+			if(i == sizeof(waypointList))
+			{
+				message("No waypoints with Titanium cubes on them, halting program.", DisplayError);
+				break;
+			}
+			if(search(Titanium,waypointList[i].position,0,5) != null)
+			{
+				waypoint = waypointList[i];
+				RadarConstruction(waypoint);
+			}
+		}
+	}
+}
+void object::RadarConstruction(object waypoint)
+{
+	goto(space(waypoint.position));
+	turn(direction(waypoint.position));
+	build(RadarStation);
+}

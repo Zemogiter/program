@@ -1,0 +1,234 @@
+extern void object::FollowAndGuard()
+{
+	int allyType = WheeledGrabber; // put ally here (i.e. LeggedGrabber)
+	int keepCloseDist = 5;        // how far behind to follow
+	int parimeterToScan = 50;     // range to look for enemy
+	bool canScanSubsoil = true; // set to false if you dont want sniffers to sniff if they're following something
+	bool canBuild = true; // as above but for builders
+	int cat = PowerStation; //category of building to construct by the builder
+	
+	int enemyList[];                
+	enemyList[0] = AlienAnt;    
+	enemyList[1] = AlienWorm;  
+	enemyList[2] = AlienWasp; 
+	enemyList[3] = AlienSpider;
+	enemyList[4] = AlienEgg;
+	enemyList[6] = AlienQueen;
+	enemyList[7] = GreenMushroom;
+	
+	object enemy;
+	
+	if(search(BotFactory,position,0,5) != null) //if the bot is fresh from factory, we have to move it away
+	{
+		object house = radar(BotFactory);
+		turn(direction(house.position));
+		move(4);
+	}
+	
+	while(true)
+	{
+		enemy = radar(enemyList,0,360,0,parimeterToScan);
+		if(enemy == null)
+		{
+			follow(allyType,keepCloseDist,enemyList,canScanSubsoil, canBuild, cat);
+		}
+		else if (enemy != null and ShooterCheck() == true)
+		{
+			moveAndDestroy(enemy);
+		}
+		follow(allyType,keepCloseDist,enemyList,canScanSubsoil, canBuild, cat);
+	}
+}
+void object::follow(int allyType, int parimeter, int[] enemyList, bool canScanSubsoil, bool canBuild, int cat)
+{
+	object ally = radar(allyType);
+	object enemy = radar(enemyList);
+	float dis = distance(position,ally.position);
+	
+	if(dis > parimeter)                           // if too far away from ally
+	{
+		float dif = ally.position.z-position.z;
+		float ang = asin(dif/dis);
+		
+		if (ShielderCheck(ally,enemy) == true)
+		{
+			shield(1,15);
+		}
+		else if (category == Shielder and ShielderCheck(ally,enemy) == false)
+		{
+			shield(0,15);
+		}
+		if (category == Thumper and enemy != null and (distance(ally.position, enemy.position) < 40 or distance(position, enemy.position) < 40))
+		{
+			motor(0,0);
+			thump();
+		}
+		
+		int[] spotList;
+		spotList[0] = PowerSpot;
+		spotList[1] = TitaniumSpot;
+		spotList[2] = UraniumSpot;
+		spotList[3] = KeyASpot;
+		spotList[4] = KeyBSpot;
+		spotList[5] = KeyCSpot;
+		spotList[6] = KeyDSpot;
+		object spot = radar(spotList);
+		
+		if (SnifferCheck() == true and canScanSubsoil == true and (spot == null or distance(position, spot.position) > 10) and dis < parimeter)
+		{
+			message("Debug: Distance is " + dis + " while parimeter is " + parimeter + ", engaging sniff.");
+			if(topo(position) > 0)
+			{
+				jet(-1);
+				wait(1);
+				motor(0,0);
+				wait(1);
+			}
+			sniff();
+		}
+		object cube = search(Titanium,ally.position);
+		if (BuilderCheck() == true and cube != null and flatground(cube.position,10) >= 10)
+		{
+			goto(space(cube.position));
+			turn(direction(cube.position));
+			build(cat);
+		}
+		
+		jet(1-(ang/-20));
+		
+		float dir = direction(ally.position);
+		
+		motor(1-dir/22.5,1+dir/22.5);             // move in closer
+	}
+	else                                          // otherwise too close
+	{ 
+		motor(dis/parimeter-1, dis/parimeter-1);  // back up a little
+		if(topo(position) > 0)                    // if not over water
+		jet(-1);                                  // then land to conserve energy/minimize heat
+	}
+}
+bool object::ShooterCheck()
+{
+	//PhazerShooter not included by default because of it's bad accuracy when a program is controlling it
+	int shooterList[];
+	shooterList[0] = WingedShooter;
+	shooterList[1] = TrackedShooter;
+	shooterList[2] = WheeledShooter;
+	shooterList[3] = LeggedShooter;
+	shooterList[4] = WingedOrgaShooter;
+	shooterList[5] = TrackedOrgaShooter;
+	shooterList[6] = WheeledOrgaShooter;
+	shooterList[7] = LeggedOrgaShooter;
+	
+	for (int i = 0; i < 7;i++)
+	{
+		if (this.category == shooterList[i])
+		{
+			return true;
+		}
+	}
+	return false;
+}
+bool object::BuilderCheck()
+{
+	int builderList[];
+	builderList[0] = WingedBuilder;
+	builderList[1] = TrackedBuilder;
+	builderList[2] = WheeledBuilder;
+	builderList[3] = LeggedBuilder;
+	
+	for (int i = 0; i < 3;i++)
+	{
+		if (this.category == builderList[i])
+		{
+			return true;
+		}
+	}
+	return false;
+}
+bool object::ShielderCheck(object ally,object enemy)
+{
+	if(category == Shielder and enemy != null and (distance(ally.position, enemy.position) < 40 or enemy != null and distance(position, enemy.position) < 40) or category == Shielder and (this.shieldLevel < 1 or ally.shieldLevel < 1))
+	{
+		return true;
+	}
+	return false;
+}
+bool object::SnifferCheck()
+{
+	int snifferList[];
+	snifferList[0] = WingedSniffer;
+	snifferList[1] = TrackedSniffer;
+	snifferList[2] = WheeledSniffer;
+	snifferList[3] = LeggedSniffer;
+	
+	for (int i = 0; i < 4;i++)
+	{
+		if (this.category == snifferList[i])
+		{
+			return true;
+		}
+	}
+	return false;
+}
+void object::moveAndDestroy(object target)
+{
+	float dir;    // direction of target from shooter
+	float dis;    // distance of target from shooter
+	float dif;    // difference in altitude of target & shooter (relative to sea-level)
+	float ang;    // angle shooter must aim (-20 degrees favorable)
+	
+	dis = distance(position,target.position);
+	dif = target.position.z-position.z;
+	ang = asin(dif/dis);
+	
+	jet(1-(ang/-20));                         // thrust until 20 degress above target
+	
+	dir = direction(target.position); 
+	
+	motor(1-dir/22.5,1+dir/22.5);             // move towards enemy
+	
+	dis = distance(position,target.position);   
+	dif = target.position.z-position.z;         
+	ang = asin(dif/dis);                        
+	
+	aim(ang);                                 // take aim
+	
+	dir = direction(target.position);           
+	
+	if(dis < 40 and dir > -10 and dir < 10 and LOS(target,dis) == true)   // if within range and there is a line of sight
+	{
+		fire(0.1);
+	}
+}
+boolean object::LOS(object objTarget, float fltDist)
+{
+	if(objTarget == null) return false;    //if it doesn't exist you can't see it
+	ipf(10000);                            //Zip through the code AFAP
+	point pntCheck;
+	point pntScale;
+	point pntHigh;
+	point pntPosAlt;
+	float fltDistance;
+	
+	pntPosAlt = position;
+	fltDistance = distance(position, objTarget.position);
+	
+	//Calculate the change per unit... "3d slope"
+	pntScale.x = (objTarget.position.x - position.x)/fltDistance;
+	pntScale.y = (objTarget.position.y - position.y)/fltDistance;
+	pntScale.z = (objTarget.position.z - position.z)/fltDistance;
+	
+	//loop until you have reached the location of the target
+	for(int I=fltDist; I < fltDistance; I=I+fltDist)
+	{
+		pntCheck.x = pntPosAlt.x + (pntScale.x * I);
+		pntCheck.y = pntPosAlt.y + (pntScale.y * I);
+		pntCheck.z = pntPosAlt.z + (pntScale.z * I);
+		
+		//see if the "line of site" that is calculated
+		//is above or below the ground
+		if(pntCheck.z < topo(pntCheck)) return false;
+	}
+	return true;
+}

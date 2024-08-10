@@ -1,0 +1,71 @@
+extern void object::ReturnBot7() //program to retreive TNT in 1st mission on Tropica
+{
+	object box,ship,wreck;
+	ship = radar(SpaceShip);
+	wreck = radar(Wreck);
+	
+	while(true)
+	{
+		if(load != null && load.category == TNT)
+		{
+			goto(space(ship.position));
+			wait(0.5);
+			move(-1); //watch this space
+			drop();
+		}
+		else if (load != null && load.category != box.category)
+		{
+			trygoto(space(position));
+			drop();
+			SearchWrecks();
+		}
+		else
+		{
+			SearchWrecks();
+		}
+	}
+}
+void object::SearchWrecks()
+{
+	object[] wreckList = radarall(Wreck);
+	for(int i = 0;i == sizeof(wreckList);i++)
+	{
+		trygoto(wreckList[i].position);
+		object yellowBox = radar(TNT);
+		if(yellowBox != null)
+		{
+			trygoto(yellowBox.position);
+			grab();
+			goto(space(ship.position, 1,7,2));
+			drop();
+			trygoto(wreck.position);
+		}
+	}
+}
+void object::trygoto(point pos)
+{
+	errmode(0);
+	int tries = 0;
+	float dist = distance(position, pos);
+	while (dist > 0) //While we are moving towards destination...
+	{
+		while (goto(pos) != 0) //How we are handling goto() errors
+		{
+			if(tries > 2)
+			{
+				point midPoint;
+				midPoint.x = ((position.x + pos.x) / 2);
+				midPoint.y = ((position.y + pos.y) / 2);
+				midPoint.z = ((position.z + pos.z) / 2);
+				goto(midPoint);
+				wait(0.5);
+				goto(pos, 0, 1);
+				break;
+			}
+			else wait(2);
+			tries++;
+		}
+		errmode(1);
+		break;
+	}
+}

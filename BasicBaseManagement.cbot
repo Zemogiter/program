@@ -1,0 +1,272 @@
+extern void object::BasicBaseManagement()
+{
+	object shooter = radar(WingedOrgaShooter);
+	bool allow2ndShooter = true;
+
+	while(true)
+	{
+		if(radar(Titanium) == null)
+		{
+			CubeCreate();
+		}
+		else if(radar(Titanium) != null && radar(PowerCell) == null)
+		{
+			PowerCellCreate();
+		}
+		else if(radar(Titanium) != null && radar(PowerCell) != null and shooter == null)
+		{
+			ShooterCreate(shooter);
+		}
+		if(allow2ndShooter == true)
+		{
+			ShooterCreate(shooter);
+		}
+		Mainteneance();
+		ShooterMainteneance();
+	}	
+}
+void object::CubeCreate()
+{
+	while(radar(TitaniumOre) == null)
+	{
+		wait(1);
+	}
+	
+	object ore = radar(TitaniumOre);
+	object converter = radar(Converter);
+	
+	goto(ore.position);
+	grab();
+	goto(converter.position);
+	drop();
+	move(-3);
+	wait(1);
+	while(isbusy(converter) == true)
+	{
+		wait(1);
+	}
+	grab();
+	Mainteneance();
+	if(radar(PowerCell) == null)
+	{
+		PowerCellCreate();
+	}
+	else
+	{
+		goto(space(radar(BotFactory)));
+		drop();
+	}
+}
+void object::PowerCellCreate()
+{
+	if(load == null)
+	{
+		object cube = radar(Titanium);
+		goto(cube.position);
+		grab();
+	}
+	object make = radar(PowerPlant);
+	goto(make.position);
+	drop();
+	wait(1);
+	while(isbusy(make) == true)
+	{
+		wait(1);
+	}
+	grab();
+	goto(space(radar(BotFactory)));
+	drop();
+}
+void object::ShooterCreate(object shooter)
+{
+	object botFactory = radar(BotFactory);
+	object cube = radar(Titanium);
+	
+	if(cube == null)
+	{
+		CubeCreate();
+	}
+	object cell = radar(PowerCell);
+	if(cell == null)
+	{
+		PowerCellCreate();
+	}
+	goto(cube.position);
+	grab();
+	goto(botFactory);
+	drop();
+	factory(shooter.category);
+	Mainteneance();
+	goto(cell.position);
+	grab();
+	goto(GetFactoryFront(botFactory));
+	turn(direction(botFactory.position));
+	while(isbusy(botFactory) == true)
+	{
+		wait(1);
+	}
+	drop();
+	goto(space(botFactory.position));
+	Mainteneance();
+}
+point object::GetFactoryFront(object botFactory) // returns a point in front of the BotFactory, grabber goes there instead of the building itself, preventing issues with constantly bumping into it (or the bot inside it) or clipping trough the building's gate since it's not a solid object, huge thanks to tomaszkax86 for providing a solution 
+{
+	float angle = botFactory.orientation;
+	float radius = 5;
+	point factoryFront;
+	factoryFront.x = botFactory.position.x + radius * cos(angle);
+	factoryFront.y = botFactory.position.y + radius * sin(angle);
+		
+	return factoryFront;
+}
+void object::Mainteneance()
+{
+	int list[], i;
+	object power,repair;
+	
+	i = 0;
+	list[i++] = PowerStation;
+	list[i++] = PowerCaptor;
+	
+	errmode(0);
+	
+	power = radar(list);
+	
+	if(power == null && this.category != Subber)
+	{
+		int cellList[];
+		cellList[0] = PowerCell;
+		cellList[1] = NuclearCell;
+		object cell = radar(cellList);
+		
+		if(cell.energyLevel >= energyCell.energyLevel && cell.energyLevel >= 0.5)
+		{
+			message("Swapping with better PowerCell/NuclearCell...",DisplayInfo);
+			goto(cell.position);
+			grab();   
+			drop(Behind);
+			grab(EnergyCell);  
+			drop();
+			grab(Behind);
+			drop(EnergyCell);
+		}
+	}
+	
+	if(power != null && energyCell.energyLevel < 0.5 && energyCell.category != NuclearCell)
+	{
+		message("Battery low, going to recharge facility", DisplayInfo);
+		goto(power.position);
+		while(energyCell.energyLevel < 1)
+		{
+			wait(1);
+		}
+	}
+	else if (energyCell.energyLevel < 0.4 && power == null && energyCell.category == PowerCell) //checking if we have power cell so that we wont display this error needlessly
+	{
+		message("Power Station/Captor not found.", DisplayError);
+	}
+	else if (energyCell.energyLevel < 0.4 && canbuild(PowerStation) == false && canbuild(PowerCaptor) == false) //can't do canbuild(list), it expects a int value (not list) or category name
+	{
+		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+	}
+	
+	repair = radar(RepairCenter);
+	
+	if(shieldLevel < 0.5)
+	{
+		message("Structural integritty low, going to Repair Center", DisplayInfo);
+		goto(repair.position);
+		while(shieldLevel < 1)
+		{
+			wait(1);
+		}
+	}
+	else if (shieldLevel < 0.5 && radar(repair.category) == null)
+	{
+		message("Power Station/Captor not found.", DisplayError);
+	}
+	else if (shieldLevel < 0.5 && canbuild(repair.category) == false)
+	{
+		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+	}
+	
+	errmode(1);
+}
+void object::ShooterMainteneance()
+{
+	int shooterList[];
+	shooterList[0] = WingedShooter;
+	shooterList[1] = TrackedShooter;
+	shooterList[2] = WheeledShooter;
+	shooterList[3] = LeggedShooter;
+	shooterList[4] = WingedOrgaShooter;
+	shooterList[5] = TrackedOrgaShooter;
+	shooterList[6] = WheeledOrgaShooter;
+	shooterList[7] = LeggedOrgaShooter;
+	object shooter = radar(List);
+	point orgPosition = position;
+	
+	if(shooter.energyCell.energyLevel == 0)
+	{
+		object cell = radar(PowerCell);
+		goto(cell.position);
+		grab();
+		goto(shooter.position);
+		turn(-90);
+		drop();
+		turn(90);
+		grab();
+		turn(90);
+		drop();
+		turn(-180);
+		grab();
+		turn(90);
+		drop();
+		
+		object oldBattery = radar(PowerCell,0,360,0,5);
+		int i = 0;
+		int[] list;
+		list[i++] = PowerStation;
+		list[i++] = PowerCaptor;
+		object power = radar(list);
+			        
+		if(oldBattery != null && power != null)
+		{
+			turn(direction(oldBattery.position));
+			grab();
+			trygoto(power.position);
+			while(load.energyLevel < 1)
+			{
+				wait(1);
+			}
+			goto(space(power.position));
+			drop();
+		}
+	}
+}
+void object::trygoto(point pos)
+{
+	errmode(0);
+	int tries = 0;
+	while (distance(position, pos) > 0) //While we are moving towards destination...
+	{
+		while (goto(pos) != 0) //How we are handling goto() errors
+		{
+			if(tries > 2)
+			{
+				point midPoint;
+				midPoint.x = ((position.x + pos.x) / 2);
+				midPoint.y = ((position.y + pos.y) / 2);
+				midPoint.z = ((position.z + pos.z) / 2);
+				goto(midPoint);
+				wait(1);
+				goto(pos, 0, 1);
+				break;
+			}
+			else wait(2);
+			tries++;
+		}
+		errmode(1);
+		break;
+	}
+}

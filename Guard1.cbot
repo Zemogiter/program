@@ -1,0 +1,65 @@
+// Description:
+// This program tells your shooter to shoot any insect that comes
+// into the shooting range. It is economical and can be used in
+// many situations.
+extern void object::Guard1()
+{
+	object enemy;
+	float hdiff, cdist, defori, ori, focus, dist, cfdist, fdelay, angle;
+	int list[];
+	int i;
+	point fpos;
+	
+	i = 0;
+	list[i++] = AlienAnt;
+	list[i++] = AlienWasp;
+	list[i++] = AlienSpider;
+	list[i++] = AlienWorm;
+	
+	focus = 360; // focus relative to our original orientation
+	dist = 65; // turn towards enemy at this distance
+	cfdist = 45; // shoot enemy at this distance
+	
+	defori = orientation; // remember our original orientation
+	
+	fdelay = 0; // give this variable the smallest value
+	
+	while ( true )
+	{
+		ori = defori-orientation; // take our original orientation into account
+		enemy = radar(list, ori, focus, 0, dist); // detect nearest enemy that fits criteria
+		if ( enemy != null )
+		{
+			fpos = enemy.position;
+			if(enemy != null and enemy.velocity.x != nan) // with this
+			{
+				fpos.x = fpos.x + enemy.velocity.x; // we can predict
+			}
+			if(enemy != null and enemy.velocity.y != nan) // where enemy
+			{
+				fpos.y = fpos.y + enemy.velocity.y; // will move
+			}
+			if(direction(fpos) > 1 or direction(fpos) < -1)
+			{
+				turn(direction(fpos)); // turn towards enemy
+			}
+			
+			angle = atan2((fpos.z - this.position.z), distance2d(fpos, this.position))-this.pitch; // better version that accounts for slope
+			angle = angle - 0.6 * rand(); // random small offset for better aim
+			aim(angle); // aim cannon at enemy
+			
+			if (abstime() > fdelay and enemy != null and distance(position,enemy.position) <= cfdist ) // if enemy is not dead yet...
+			{
+				fire(0.3); // SHOOT!
+				if(fdelay <= abstime()) // make delays between firing
+				{
+					fdelay = abstime() + 0.2; // to conserve energy and spare time for movement
+				}
+			}
+		}
+		else // if no enemies around
+		{
+			aim(0); // straighten our cannon
+		}
+	}
+}
