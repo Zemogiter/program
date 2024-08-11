@@ -1,4 +1,4 @@
-extern void object::ISZB()
+extern void object::IBMS()
 {
 	int baseSize = 50; //how big is the base supposed to be
 	int resRequiredAmount = 5; //amount of resources that should be wihtnin base's borders
