@@ -1,22 +1,28 @@
-extern void object::MoveFromShip()
+extern void object::MoveFromShip() //a program that moves resources from ship to location within ajustable distance from it
 {
-	object base = radar(BlueFlag); // change accordingly
-	int resourceToTake = Titanium; // as above
-	float dist = 20; // how far away from the ship should we look for resources to transport to the base
+	object resource = radar(Titanium); // change accordingly
+	float dist = 40; // how far away from the ship should we look for resources to transport to the base
+	//variable below are used in maintnenance of the bot executing this program
+	bool lookAtConverter = true; //if true, grabber will look at converter instead of space ship for resources to move
 	bool lookforcells = false;
 	float triggerValue = 0.3;
 	
-	object ship = radar(SpaceShip);
-	
-	for(int i = 0;i <= CountCubesAtShip(ship,dist,resourceToTake);i++)
+	object base = radar(SpaceShip);
+	if (lookAtConverter == true)
 	{
-		object resourceAtShip = search(resourceToTake,ship.position,0,dist);
+		base = radar(Converter);
+	}
+	int resourceToTake = resource.category;
+	
+	for(int i = 0;i <= CountCubesAtShip(base,dist,resourceToTake);i++)
+	{
+		object resourceAtShip = search(resourceToTake,base.position,0,dist);
 		
 		Mainteneance(lookforcells, triggerValue);
 		if(load != null && load.category == resourceToTake)
 		{
 			message("Bot has the desired item already, going straight to the base.");
-			goto(space(base.position));
+			goto(space(base.position, dist));
 			drop();
 		}
 		else if(load != null && load.category != resourceToTake)
@@ -25,21 +31,29 @@ extern void object::MoveFromShip()
 			drop();
 		}
 		goto(resourceAtShip.position);
-		if(grab() != 0)
+		grab();
+		if(load != null and load.category != resourceToTake) //if grabber has a incorrect item
 		{
-			resourceAtShip = radar(resourceToTake);
-			goto(resourceAtShip.position);
-			grab();
+			message("Grabber picked up the wrong item, correcting.");
+			
+			while (load.category != Titanium)
+			{
+				goto(space());
+				drop();
+				trygoto(resource.position);
+				grab();
+			}
 		}
 		Mainteneance(lookforcells, triggerValue);
-		goto(space(base.position));
+		goto(space(base.position,dist));
 		drop();
+		goto(space());
 	}
 	
 	
 	
 }
-int object::CountCubesAtShip(object ship, float dist, int resourceToTake)
+int object::CountCubesAtShip(object base, float dist, int resourceToTake)
 {
 	object[] cubeList = radarall(resourceToTake);
 	object[] cubeAtShipList;
@@ -51,7 +65,7 @@ int object::CountCubesAtShip(object ship, float dist, int resourceToTake)
 			message("No more " + cubeList[i].category + " at ship's location, halting script.", DisplayWarning);
 			break;
 		}
-		if(distance(ship.position, cubeList[i].position) < dist)
+		if(distance(base.position, cubeList[i].position) < dist)
 		{
 			cubeAtShipList[i] = cubeList[i];
 		}
