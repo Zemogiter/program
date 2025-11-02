@@ -1,8 +1,21 @@
 extern void object::SimpleSnifferProgram()
 {
 	bool goHome = false; // set to false if you dont want the sniffer to return to its original position
+	bool cleanUp = true; // if true, sniffer will remove the flags
 	
 	point orgPosition = position;
+	int[] flagList;
+	flagList[0] = GreenFlag;
+	flagList[1] = RedFlag;
+	flagList[2] = YellowFlag;
+	object flagItem = radar(flagList);
+	
+	if (flagItem == null)
+	{
+		message("No Flag found, halting script", DisplayError);
+		return;
+	}
+	
 	PowerFlagHandler(); // uses green flags
 	wait(1);
 	TitaniumFlagHandler(); // uses red flags
@@ -10,27 +23,80 @@ extern void object::SimpleSnifferProgram()
 	UraniumFlagHandler(); // uses yellow flags
 	wait(1);
 	message("All handlers completed, spots are ready to be built on.", DisplayInfo);
-	if(goHome == true)
+	
+	if (cleanUp == true) // fix this so that it dosen't stop after removing one flag
+	{
+		message("Flag cleanup requested.");
+		int i = 0;
+		flagItem = radar(flagList[i]);
+		if (flagItem == null)
+		{
+			flagItem = radar(RedFlag);
+			if (flagItem == null)
+			{
+				flagItem = radar(YellowFlag);
+			}
+		}
+		while (flagItem != null)
+		{
+			trygoto(flagItem.position);
+			turn(direction(flagItem.position));
+			deflag();
+			if (i > sizeof(flagList))
+			{
+				message("All flags removed");
+				break;
+			}
+			flagItem = radar(flagList[i++]);
+		}
+	}
+	
+	if (goHome == true && orgPosition != position)
 	{
 		goto(orgPosition);
 	}
 }
 void object::PowerFlagHandler()
 {
-	if ((radar(PowerStation) != null and radar(PowerPlant) != null) or sizeof(radarall(PowerSpot)) >= 2)
+	if ((radar(PowerStation) != null and radar(PowerPlant) != null))
 	{
-		message("Skipping power source sniffing, we already have PowerPlant and PowerStation available or the spots are here.");
+		message("Skipping power source sniffing, we already have PowerPlant and PowerStation available.");
 		return; 
+	}
+	else if (sizeof(radarall(PowerSpot)) >= 2)
+	{
+		message("Skipping power source snigging, two PowerSpots aleady found.");
+		return;
+	}
+	else if(sizeof(radarall(PowerSpot)) == 1)
+	{
+		while(sizeof(radarall(GreenFlag)) == 1)
+		{
+			message("Another green flag needed, waiting.");
+			wait(30);
+		}
 	}
 	else
 	{
 		object Flag = radar(GreenFlag);
-		goto(Flag.position);
-		move(3);
+		if(Flag == null)
+		{
+			message("No Flag found.", DisplayError);
+			return;
+		}
+		else
+		{
+			trygoto(Flag.position);
+			move(3);
+			sniff();
+			wait(1);
+			object spotInFront = radar(PowerSpot,0,45,0,6);
+			SniffingLoop(spotInFront,Flag);
+		}
+		message("Found one PowerSpot already, moving to the second flag to locate the second PowerSpot.");
+		object farFlag = radar(GreenFlag,0,360,0,1000,-1);
+		goto(flatspace(farFlag.position,3));
 		sniff();
-		wait(1);
-		object spotInFront = radar(PowerSpot,0,45,0,6);
-		SniffingLoop(spotInFront,Flag);
 	}
 }
 void object::TitaniumFlagHandler()
@@ -53,8 +119,7 @@ void object::TitaniumFlagHandler()
 		object Flag = radar(RedFlag);
 		if(Flag != null)
 		{
-			goto(Flag.position);
-			move(3);
+			trygoto(flatspace(Flag.position,3));
 			sniff();
 			wait(1);
 			object spotInFront = radar(TitaniumSpot,0,45,0,6);
@@ -83,7 +148,7 @@ void object::UraniumFlagHandler()
 	int cubesCount = sizeof(cells);
 	int cubesCount2 = sizeof(cells2);
 	
-	if (radar(UraniumSpot) != null or ((searchCenter != null and cubesCount > 1) or (searchCenter2 != null and cubesCount2 > 1))) //we're making a assumption that having sufficient ammount of NuclearCells next to NuclearPlant/BotFactory = having a Derrick mining uranium already
+	if (radar(UraniumSpot) != null or ((searchCenter != null and cubesCount > 0) or (searchCenter2 != null and cubesCount2 > 0))) //we're making a assumption that having sufficient ammount of NuclearCells next to NuclearPlant/BotFactory = having a Derrick mining uranium already
 	{
 		message("Skipping Uranium source sniffing, we already have underground Uranium source available.");
 		return;
@@ -93,12 +158,11 @@ void object::UraniumFlagHandler()
 		object Flag = radar(YellowFlag);
 		if(Flag != null)
 		{
-			goto(Flag.position);
-			    move(3);
-			    sniff();
-			    wait(1);
-			    object spotInFront = radar(UraniumSpot,0,45,0,6);
-			    SniffingLoop(spotInFront,Flag);
+			trygoto(flatspace(Flag.position,3));
+			sniff();
+			wait(1);
+			object spotInFront = radar(UraniumSpot,0,45,0,6);
+			SniffingLoop(spotInFront,Flag);
 		}
 		else
 		{
@@ -110,7 +174,7 @@ void object::SniffingLoop(object spotInFront, object Flag)
 {
 	if (spotInFront == null)
 	{
-		while(radar(spotInFront.category,0,45,0,6) != null) // repeat until spot is found
+		while(radar(spotInFront.category,0,45,0,6) == null) // repeat until spot is found
 		{
 			message(spotInFront.category + " not found. Correcting sniffer's position.");
 			turn(180);
@@ -132,20 +196,94 @@ void object::SniffingLoop(object spotInFront, object Flag)
 			message(spotInFront.category + " not found. Correcting sniffer's position.");
 		}
 	}
-	else if (spotInFront != null and Flag.category == GreenFlag or radar(PowerSpot) != null or sizeof(radarall(PowerSpot)) > 1)
-	{
-		message("Spot for first power facility found, now searching for the second");
-		object newFlag = radar(GreenFlag,0,360,0,1000,-1); // searching for the furthest away flag
-		point midPoint; // a point in the middle between flags, we will put the second green marker around here
-		midPoint.x = ((position.x + newFlag.position.x) / 2);
-		midPoint.y = ((position.y + newFlag.position.y) / 2);
-		midPoint.z = ((position.z + newFlag.position.z) / 2);
-		goto(midPoint);
-		wait(1);
-		SniffingLoop(spotInFront,newFlag);
-	}
 	else
 	{
 		return;
+	}
+}
+void object::trygoto(point pos)
+{
+	errmode(0);
+	int tries = 0;
+	while (distance(position, pos) > 0) //While we are moving towards destination...
+	{
+		bool b=true;
+		
+		while((this.position.z-topo(this.position))<5)
+		{
+			jet(0.3);
+		}
+		while(distance2d(this.position,pos)>1)
+		{
+			turn(direction(pos));
+			motor(0.5,0.5);
+			try{
+				if(topo(this.position)<0)
+				{
+					while(this.position.z<5){
+						jet(0.3);
+					}
+					while(this.position.z>5){
+						jet(-0.3);
+					}
+				}
+				else
+				{
+					b=true;
+					while((this.position.z-topo(this.position))<5){
+						jet(0.3);
+					}
+					while((this.position.z-topo(this.position))>5){
+						jet(-0.3);
+					}
+					if(this.temperature>0.7){
+						jet(-0.3);
+						while((this.position.z-topo(this.position))>0);
+						jet(0);
+						while(this.temperature>0);
+					}
+				}
+			}
+			catch((topo(this.position)<=0)&&(this.temperature>0.2)&&b)
+			{
+				jet(0);
+				motor(-0.5,-0.5);
+				while(topo(this.position)<=0);
+				motor(0,0);
+				jet(-0.3);
+				while((this.position.z-topo(this.position))>0);
+				jet(0);
+				while(this.temperature>0);
+				jet(0.3);
+				while((this.position.z-topo(this.position))<5);
+				motor(1,1);
+				while(topo(this.position)>=0);
+				b=false;
+			}
+		}
+		motor(0,0);
+		jet(-0.3);
+		while((this.position.z-topo(this.position))>0);
+		jet(0);
+		
+		while (goto(pos,0,0) != 0) //How we are handling goto() errors
+		{
+			if(tries > 2)
+			{
+				point midPoint;
+				midPoint.x = ((position.x + pos.x) / 2);
+				midPoint.y = ((position.y + pos.y) / 2);
+				midPoint.z = ((position.z + pos.z) / 2);
+				produce(midPoint,0,WayPoint);
+				goto(midPoint);
+				wait(1);
+				goto(pos, 0, 1);
+				break;
+			}
+			else wait(2);
+			tries++;
+		}
+		errmode(1);
+		break;
 	}
 }
