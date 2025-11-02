@@ -59,7 +59,7 @@ extern void object::Researcher()
 			for(int i = 0;i <= sizeof(batteryList); i++) 
 			{
 				errmode(0);
-				if(sizeof(batteryList) == 0) //no batteries at all on the map, grabber moves to make one
+				if(sizeof(batteryList) == 0 && make != null && cube != null) //no batteries at all on the map, grabber moves to make one
 				{
 					goto(cube.position);
 					grab();
@@ -84,6 +84,22 @@ extern void object::Researcher()
 					{
 						wait(1);
 					}
+					goto(center.position);
+					drop();
+					Research(continiousMode);
+				}
+				if (recharge == null && cube != null && make != null) //no way to recharge, we have the means to manufacture a power cell for the ResearchCenter
+				{
+					goto(cube.position);
+					grab();
+					goto(make.position);
+					drop();
+					wait(2);
+					while(isbusy(make))
+					{
+						wait(1);
+					}
+					grab();
 					goto(center.position);
 					drop();
 					Research(continiousMode);
