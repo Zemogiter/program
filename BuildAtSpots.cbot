@@ -1,6 +1,8 @@
-extern void object::BuildAtSpots()
+extern void object::BuildAtSpots() //A simplified version of BuilderBotAutomation, handles only the construction of PowerPlant, PowerStation and Derrick
 {
 	bool forcePowerStation = false; // set to true if you want the builder to construct another PowerStation even if you have one already
+	bool noDerrickWhileOre = true; // prevents Derrick construction while surface ore exists
+	bool returnToStart = true; // if false, Builder won't go back to where it was when the script started
 	
 	int[] spotList;
 	spotList[0] = PowerSpot;
@@ -10,7 +12,9 @@ extern void object::BuildAtSpots()
 	spotList[4] = KeyBSpot;
 	spotList[5] = KeyCSpot;
 	spotList[6] = KeyDSpot;
+	
 	object[] spotList2 = radarall(spotList);
+	point startPosition = this.position;
 	
 	for(int i = 0;i <= sizeof(spotList2);i++)
 	{
@@ -38,6 +42,7 @@ extern void object::BuildAtSpots()
 				if (forcePowerStation == true)
 				{
 					build(PowerStation);
+					break;
 				}
 				else
 				{
@@ -47,6 +52,16 @@ extern void object::BuildAtSpots()
 			}
 			else
 			{
+				if (noDerrickWhileOre == true && sizeof(radarall(TitaniumOre)) != 0 && spotList2[i].category == TitaniumSpot)
+				{
+					message("Surface titanium ore present, not building Derrick.");
+					continue;
+				}
+				if (noDerrickWhileOre == true && sizeof(radarall(TitaniumOre)) != 0 && spotList2[i].category == UraniumOre)
+				{
+					message("Surface uranium ore present, not building Derrick.");
+					break;
+				}
 				message("Going to " + spotList2[i].category + ", attempting to build Derrick");
 				goto(space(spotList2[i].position));
 				PositionAjustment(spotList2[i]);
@@ -56,15 +71,22 @@ extern void object::BuildAtSpots()
 		else
 		{
 			message("No spots to build on or all building jobs were complete.", DisplayInfo);
+			if (returnToStart == true)
+			{
+				message("Returning to starting position", DisplayInfo);
+				goto(startPosition);
+			}
 			break;
 		}
 	}
 }
 void object::PositionAjustment(object spot)
 {
+	errmode(0);
 	turn(direction(spot.position));
-	while(distance(position, spot.position) > 4)
+	while(distance(position, spot.position) > 3)
 	{
 		move(2);
 	}
+	errmode(1);
 }
