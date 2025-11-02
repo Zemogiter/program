@@ -4,18 +4,29 @@ extern void object::SafeCrackerNoCheat()
 	
 	if(vault == null)
 	{
-		message("Vault not found. Manual check required.", DisplayWarning);
+		message("Vault not found. Manual check required, halting program.", DisplayWarning);
+		return;
 	}
 	if(ClawCheck() == true) //if there's a key in grabber's claw
 	{
 		trygoto(space(vault.position));
 		drop();
-		TransportKeys(vault);
+		TransportKeys(vault,load.category);
 	}
 	else
 	{
-		TransportKeys(vault);
+		TransportKeys(vault,-1);
 	}
+}
+point object::GetKeyhole(point var, object vault) // returns a point in front of the a vault's keyhole, grabber goes there instead of the building itself, huge thanks to tomaszkax86 for providing a solution 
+{
+	float angle = vault.orientation;
+	float radius = 7; //watch this space
+	point keyhole;
+	keyhole.x = var.x + radius * cos(angle);
+	keyhole.y = var.y + radius * sin(angle);
+	
+	return keyhole;
 }
 void object::trygoto(point pos)
 {
@@ -56,23 +67,23 @@ bool object::ClawCheck()
 	}
 	return false;
 }
-void object::TransportKeys(object vault) //finds the key and moves with it to the vault's vicinity
+void object::TransportKeys(object vault,int keyKategory) //finds the key and moves with it to the vault's vicinity
 {
 	for (int j = 0;j <= 3;j++)
 	{
 		errmode(0);
-		Recharge();
 		point keyPos = PickKey(vault);
+		if (keyKategory != -1)
+		{
+			trygoto(space(vault.position));
+			PlaceKeys(vault);
+		}
 		if (keyPos != new point(9999,9999,999))
 		{
 			trygoto(keyPos);
 			grab();
-			Recharge();
-			object vault = radar(Vault);
 			trygoto(space(vault.position));
-			drop();
 			PlaceKeys(vault);
-			Recharge();
 		}
 		else
 		{
@@ -105,20 +116,29 @@ point object::PickKey(object vault)
 void object::PlaceKeys(object vault)
 {
 	point pntKeyA;
+	point keyholeA;
 	point pntKeyB;
+	point keyholeB;
 	point pntKeyC;
+	point keyholeC;
 	point pntKeyD;
+	point keyholeD;
+	
 	float fltAng;
 	float fltOri = vault.orientation;
 	    
 	fltAng = fltOri-180;
 	pntKeyA.x = vault.position.x + (4*cos(fltAng));
 	pntKeyA.y = vault.position.y + (4*sin(fltAng));
+	keyholeA = GetKeyhole(pntKeyA, vault);
 	
 	if(search(KeyA,pntKeyA,0,3) == null)
 	{
+		message("Trying to reach the A point");
+		produce(pntKeyA,0,BlueFlag);
 		trygoto(pntKeyA);
 		wait(0.5);
+		turn(direction(vault.position));
 		move(-2);
 		drop();
 	}
@@ -126,11 +146,14 @@ void object::PlaceKeys(object vault)
 	fltAng = fltOri;
 	pntKeyB.x = vault.position.x + (4*cos(fltAng));
 	pntKeyB.y = vault.position.y + (4*sin(fltAng));
+	keyholeB = GetKeyhole(pntKeyB, vault);
 	
 	if (search(KeyB,pntKeyB,0,3) == null)
 	{
+		message("Trying to reach the B point");
 		trygoto(pntKeyB);
 		wait(0.5);
+		turn(direction(vault.position));
 		move(-2);
 		drop();
 	}
@@ -138,40 +161,30 @@ void object::PlaceKeys(object vault)
 	fltAng = fltOri-90;
 	pntKeyC.x = vault.position.x + (4*cos(fltAng));
 	pntKeyC.y = vault.position.y + (4*sin(fltAng));
+	keyholeC = GetKeyhole(pntKeyC, vault);
 	
 	if(search(KeyC,pntKeyC,0,3) == null)
 	{
+		message("Trying to reach the C point");
 		trygoto(pntKeyC);
 		wait(0.5);
+		turn(direction(vault.position));
 		move(-2);
-		drop();;
+		drop();
 	}
 	
 	fltAng = fltOri+90;
 	pntKeyD.x = vault.position.x + (4*cos(fltAng));
 	pntKeyD.y = vault.position.y + (4*sin(fltAng));
+	keyholeD = GetKeyhole(pntKeyD, vault);
 	
 	if(search(KeyD,pntKeyD,0,3) == null)
 	{
+		message("Trying to reach the D point");
 		trygoto(pntKeyD);
 		wait(0.5);
+		turn(direction(vault.position));
 		move(-2);
 		drop();
-	}
-}
-void object::Recharge()
-{
-	if ( energyCell.category == PowerCell and energyCell.energyLevel < 0.6 )
-	{                         // if so:
-		object item = radar(PowerStation);
-		if( item == null ){item = radar(PowerCaptor);}
-		if ( item != null )   // station found ?
-		{
-			goto(item.position); // go there
-			while ( energyCell.energyLevel < 1 )
-			{ // until recharged:
-				wait(1);      // wait
-			}
-		}
 	}
 }
