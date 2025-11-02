@@ -2,7 +2,7 @@
 extern void object::ObjectGrabAndMove()
 {
 	int orgaCount = 3; // how many OrgaMatter is needed on board?
-	int blackboxCount = 1; // as above but for BlackBox
+	int blackboxCount = 2; // as above but for BlackBox
 	
 	object box,ship,matter,lab,tnt;
 	ship = radar(SpaceShip);
@@ -21,13 +21,14 @@ extern void object::ObjectGrabAndMove()
 	
 	if (ship == null and box != null) //trying to sort out edge case first, ship is not on the map
 	{
-		message("No ship fount but BlackBox is present, be ready to steer the bot once it has BB.");
+		message("No ship found but BlackBox is present, be ready to steer the bot once it has the object.");
 		trygoto(box.position);
 		grab();
 		message("BlackBox in claw, switching to manual.");
 	}
 	else if (load != null && load.category == BlackBox) //BB in claw
 	{
+		message("BlackBox in claw, going to the ship.");
 		trygoto(space(ship.position));
 		drop();
 	}
@@ -225,6 +226,60 @@ void object::trygoto(point pos)
 		break;
 	}
 }
+void object::newgoto(point p){
+	bool b=true;
+	
+	while((this.position.z-topo(this.position))<5){
+		jet(0.3);
+	}
+	while(distance2d(this.position,p)>1){
+		turn(direction(p));
+		motor(0.5,0.5);
+		try{
+			if(topo(this.position)<0){
+				while(this.position.z<5){
+					jet(0.3);
+				}
+				while(this.position.z>5){
+					jet(-0.3);
+				}
+			}
+			else{
+				b=true;
+				while((this.position.z-topo(this.position))<5){
+					jet(0.3);
+				}
+				while((this.position.z-topo(this.position))>5){
+					jet(-0.3);
+				}
+				if(this.temperature>0.7){
+					jet(-0.3);
+					while((this.position.z-topo(this.position))>0);
+					jet(0);
+					while(this.temperature>0);
+				}
+			}
+		}catch((topo(this.position)<=0)&&(this.temperature>0.2)&&b){
+			jet(0);
+			motor(-0.5,-0.5);
+			while(topo(this.position)<=0);
+			motor(0,0);
+			jet(-0.3);
+			while((this.position.z-topo(this.position))>0);
+			jet(0);
+			while(this.temperature>0);
+			jet(0.3);
+			while((this.position.z-topo(this.position))<5);
+			motor(1,1);
+			while(topo(this.position)>=0);
+			b=false;
+		}
+	}
+	motor(0,0);
+	jet(-0.3);
+	while((this.position.z-topo(this.position))>0);
+	jet(0);
+	 }
 int object::CountObjectsOnShip(object ship, int objectToCount)
 {
 	if(ship != null)
