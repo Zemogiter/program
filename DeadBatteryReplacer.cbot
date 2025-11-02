@@ -1,6 +1,7 @@
 extern void object::DeadBatteryReplacer()
 {
 	bool rechargeOldBattery = true; //if true, grabber will recharge the battery it replaced
+	bool createBattery = true;
 	
 	int[] list;
 	int i = 0;
@@ -58,14 +59,7 @@ extern void object::DeadBatteryReplacer()
 			}
 			grab();
 			wait(1);
-			if(load != null and load.category != battery.category) //if grabber has a incorrect item
-			{
-				message("Grabber picked up the wrong item, correcting.");
-				goto(space());
-				drop();
-				trygoto(battery.position);
-				grab();
-			}
+			WrongItemHandler(battery);
 			trygoto(subList[i].position);
 			turn(-90);
 			drop();
@@ -77,20 +71,14 @@ extern void object::DeadBatteryReplacer()
 			grab();
 			turn(90);
 			drop();
+			OldBatteryHandler(rechargeOldBattery);
 		}
 		else if(subList != null && topo(subList[i].position) > 3 && subList[i].energyCell == null)
 		{
 			message("Found a Subber that has no power cell, moving there.");
 			goto(battery.position);
 			grab();
-			if(load != null and load.category != battery.category) //if grabber has a incorrect item
-			{
-				message("Grabber picked up the wrong item, correcting.");
-				goto(space());
-				drop();
-				trygoto(battery.position);
-				grab();
-			}
+			WrongItemHandler(battery);
 			goto(subList[i].position);
 			drop();
 		}
@@ -99,37 +87,59 @@ extern void object::DeadBatteryReplacer()
 	object[] botList = radarall(list);
 	int listSize = sizeof(botList);
 	
-	for(int i = 0; i <= listSize;i++) // main loop
+	for (int i = 0; i <= listSize;i++) // main loop
 	{
 		object battery = BatteryCheck();
-		
+		if (battery == null && createBattery == true)
+		{
+			message("No battery found, moving to create one", DisplayWarning);
+			object cube = radar(Titanium);
+			object plant = radar(PowerPlant);
+			
+			while (cube == null && plant == null)
+			{
+				message("Waiting for the PowerPlant and Titanium cube");
+				wait(10);
+			}
+			trygoto(cube.position);
+			grab();
+			trygoto(plant.position);
+			drop();
+			while(isbusy(plant) == true)
+			{
+				wait(1);
+			}
+			grab();
+			goto(space(position));
+			drop();
+			message("PowerCell ready, looking for the bots that need it.");
+			wait(1);
+		}
+		else if (battery == null && createBattery == true)
+		{
+			message("No power source available, halting program!", DisplayError);
+			break;
+		}
 		if (i == listSize)
 		{
 			message("No bots in need of battery switch.");
 			break;
 		}
 		BotInFactoryHandler(botList[i], rechargeOldBattery, battery);
-		if(botList[i].energyCell != null && botList[i].energyCell.energyLevel < 0.3)
+		if (botList[i].energyCell != null && botList[i].energyCell.energyLevel < 0.3)
 		{
 			message("Found a " + botList[i].category + " that is low on power, moving there.");
-			if(distance(position, battery.position) > 2)
+			if (battery != null && distance(position, battery.position) > 2)
 			{
 				trygoto(battery.position);
 			}
-			else
+			else if (battery != null && distance(position, battery.position) < 2)
 			{
 				turn(direction(battery.position));
 			}
 			grab();
 			wait(1);
-			if(load != null and load.category != battery.category or load.energyLevel <= botList[i].energyCell.energyLevel) //if grabber has a incorrect item
-			{
-				message("Grabber picked up the wrong item, correcting.");
-				goto(space());
-				drop();
-				trygoto(battery.position);
-				grab();
-			}
+			WrongItemHandler(battery);
 			trygoto(botList[i].position);
 			turn(-90);
 			drop();
@@ -141,40 +151,14 @@ extern void object::DeadBatteryReplacer()
 			grab();
 			turn(90);
 			drop();
-			
-			object oldBattery = radar(PowerCell,0,360,0,5);
-			int i = 0;
-			int[] list;
-			list[i++] = PowerStation;
-			list[i++] = PowerCaptor;
-			object power = radar(list);
-			        
-			if(rechargeOldBattery == true && oldBattery != null && power != null)
-			{
-				turn(direction(oldBattery.position));
-				grab();
-				trygoto(power.position);
-				while(load.energyLevel < 1)
-				{
-					wait(1);
-				}
-				goto(space(power.position));
-				drop();
-			}
+			OldBatteryHandler(rechargeOldBattery);
 		}
 		else if(botList[i].energyCell == null)
 		{
 			message("Found a " + botList[i].category + " that has no power cell, moving there.");
-			goto(battery.position);
+			goto(BatteryCheck().position);
 			grab();
-			if(load != null and load.category != battery.category) //if grabber has a incorrect item
-			{
-				message("Grabber picked up the wrong item, correcting.");
-				goto(space());
-				drop();
-				trygoto(battery.position);
-				grab();
-			}
+			WrongItemHandler(battery);
 			goto(botList[i].position);
 			drop();
 		}
@@ -182,7 +166,7 @@ extern void object::DeadBatteryReplacer()
 }
 void object::BotInFactoryHandler(object bot, bool rechargeOldBattery, object battery) //checks if a bot is in BotFactory and acts accordingly
 {
-	if (search(BotFactory,bot.position,0,4) != null && bot.energyCell.energyLevel < 3)
+	if (bot != null && search(BotFactory,bot.position,0,4) != null && bot.energyCell != null && bot.energyCell.energyLevel < 3)
 	{
 		message("Found a " + bot.category + " that is low on power and in a BotFactory, moving there.");
 		if(distance(position, battery.position) > 2)
@@ -214,25 +198,7 @@ void object::BotInFactoryHandler(object bot, bool rechargeOldBattery, object bat
 		grab();
 		goto(bot.position);
 		drop();
-		if(rechargeOldBattery == true && oldBattery != null && (radar(PowerStation) != null or radar(PowerCaptor) != null))
-		{
-			goto(oldBattery.position);
-			grab();
-			
-			int i = 0;
-			int[] list;
-			list[i++] = PowerStation;
-			list[i++] = PowerCaptor;
-			object power = radar(list);
-			
-			trygoto(power.position);
-			while(load.energyLevel < 1)
-			{
-				wait(1);
-			}
-			goto(space(power.position));
-			drop();
-		}
+		OldBatteryHandler(rechargeOldBattery);
 	}
 	else if (search(BotFactory,bot.position,0,4) != null && bot.energyCell == null)
 	{
@@ -246,14 +212,7 @@ void object::BotInFactoryHandler(object bot, bool rechargeOldBattery, object bat
 			turn(direction(battery.position));
 		}
 		grab();
-		if(load != null and load.category != battery.category) //if grabber has a incorrect item
-		{
-			message("Grabber picked up the wrong item, correcting.");
-			goto(space());
-			drop();
-			trygoto(battery.position);
-			grab();
-		}
+		WrongItemHandler(battery);
 		goto(bot.position);
 		drop();
 	}
@@ -285,7 +244,7 @@ object object::BatteryCheck()
 	list[j++] = NuclearCell;
 	object battery = radar(list);
 	
-	if (battery.energyLevel < 1 && battery.category == PowerCell or (battery.category == NuclearCell and battery.energyLevel < 0.01)) //if the first found battery is not full and its rechargable (or its a empty Nuclear Cell, find the cell that is full 
+	if (battery != null && battery.energyLevel < 1 && battery.category == PowerCell or (battery != null && battery.category == NuclearCell && battery.energyLevel < 0.01)) //if the first found battery is not full and its rechargable (or its a empty Nuclear Cell, find the cell that is full 
 	{
 		object[] batteryList = radarall(list);
 		for(int i = 0; i < sizeof(batteryList); ++i)
@@ -296,13 +255,44 @@ object object::BatteryCheck()
 				break;
 			}
 		}
-		message("Debug - position of found " + battery.category + " at " + battery.position);
 		return battery;
 	}
 	else
 	{
-		message("Debug - position of found " + battery.category + " at " + battery.position);
 		return battery;
+	}
+}
+void object::WrongItemHandler(object battery)
+{
+	if(load != null and load.category != battery.category) //if grabber has a incorrect item
+	{
+		message("Grabber picked up the wrong item, correcting.");
+		goto(space());
+		drop();
+		trygoto(battery.position);
+		grab();
+	}
+}
+void object::OldBatteryHandler(bool rechargeOldBattery)
+{
+	object oldBattery = radar(PowerCell,0,360,0,3);
+	if (rechargeOldBattery == true && oldBattery != null && oldBattery.energyLevel < 1)
+	{
+		message("Bringing the old battery for recharge");
+		turn(90);
+		grab();
+		object power = radar(PowerStation);
+		if (power != null)
+		{
+			message("Power Station found, moving there");
+			goto(power.position);
+			while (load.energyLevel < 1)
+			{
+				wait(1);
+			}
+			goto(space(power.position));
+			drop();
+		}
 	}
 }
 void object::trygoto(point pos)
