@@ -16,23 +16,14 @@ extern void object::Defend()
 	while(true)
 	{
 		enemy = radar(cat,0,360,0,parimeterToScan);
-		if(enemy == null)                                     // if no enemy around, fill up on energy if needed 
+		if(enemy == null) // if no enemy around, do the maintenance procedure
 		{
 			basicMaintE();
-		}
-		else
-		{
-			moveAndDestroy(enemy);                            // otherwise attack
-		}
-		
-		enemy = radar(cat,0,360,0,parimeterToScan);     // between recharging, enemy spotted?
-		if(enemy == null)                                     // if no enemy around, repair shields if needed
-		{
 			basicMaintS(shieldTreshold);
 		}
 		else
 		{
-			moveAndDestroy(enemy);                           // otherwise attack
+			moveAndDestroy(enemy); // otherwise attack
 		}
 		
 		enemy = radar(cat,0,360,0,parimeterToScan);     // between recharging, enemy spotted?
@@ -45,7 +36,6 @@ extern void object::Defend()
 			moveAndDestroy(enemy);                             // otherwise attack
 		}
 	}
-	
 }
 
 void object::basicMaintE()                             // basic energy maintenance
@@ -66,7 +56,7 @@ void object::basicMaintE()                             // basic energy maintenan
 
 void object::basicMaintS(float shieldTreshold)                             // basic shield maintenance
 {
-	if(shieldLevel < shieldTreshold)                              // adjust shield tolerance here
+	if(shieldLevel <= shieldTreshold)                              // adjust shield tolerance here
 	{
 		object rep = radar(RepairCenter);
 		object bot = radar(Shielder);
