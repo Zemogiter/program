@@ -1,0 +1,114 @@
+extern void object::ReturnBot4A() //another proram for ReturnBot Mission 2-2, grabs uranium from Derrick and moves it until we have 3 on board
+{
+	object derrick = radar(Derrick);
+	object ship = radar(SpaceShip);
+	
+	while (derrick == null)
+	{
+		wait(1);
+	}
+	
+	while (CountUranium(ship) != 3)
+	{
+		Mainteneance(true,0.4);
+		goto(derrick.position);
+		grab();
+		goto(space(ship.position,2,8,4)); //watch this space!
+		drop();
+	}
+	
+}
+int object::CountUranium(object ship)
+{
+	object[] cubeList = radarall(UraniumOre);
+	object[] cubeAtShipList;
+	
+	for(int i = 0;i < sizeof(cubeList);i++)
+	{
+		//errmode(0);
+		if(i == sizeof(cubeList))
+		{
+			message("We have reached the quota of 3 Uranium pieces aboard the ship.", DisplayInfo);
+			break;
+		}
+		if(distance(ship.position, cubeList[i].position) < 15)
+		{
+			cubeAtShipList[i] = cubeList[i];
+		}
+		//errmode(1);
+	}
+	return sizeof(cubeAtShipList);
+}
+void object::Mainteneance(bool lookforcells, float triggerValue)
+{
+	int list[], i;
+	object power,repair;
+	
+	i = 0;
+	list[i++] = PowerStation;
+	list[i++] = PowerCaptor;
+	
+	errmode(0);
+	
+	power = radar(list);
+	
+	if(power == null && lookforcells == true && this.category != Subber)
+	{
+		int cellList[];
+		cellList[0] = PowerCell;
+		cellList[1] = NuclearCell;
+		object cell = radar(cellList);
+		
+		if(cell.energyLevel >= energyCell.energyLevel && cell.energyLevel >= triggerValue)
+		{
+			message("Swapping with better PowerCell/NuclearCell...",DisplayInfo);
+			goto(cell.position);
+			grab();   
+			drop(Behind);
+			grab(EnergyCell);  
+			drop();
+			grab(Behind);
+			drop(EnergyCell);
+		}
+	}
+	
+	if(power != null && energyCell.energyLevel < triggerValue && energyCell.category != NuclearCell)
+	{
+		message("Battery low, going to recharge facility", DisplayInfo);
+		goto(power.position);
+		while(energyCell.energyLevel < 1)
+		{
+			wait(1);
+		}
+	}
+	else if (energyCell.energyLevel < triggerValue && power == null && energyCell.category == PowerCell) //checking if we have power cell so that we wont display this error needlessly
+	{
+		message("Power Station/Captor not found.", DisplayError);
+	}
+	else if (energyCell.energyLevel < triggerValue && canbuild(PowerStation) == false && canbuild(PowerCaptor) == false) //can't do canbuild(list), it expects a int value (not list) or category name
+	{
+		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+	}
+	
+	repair = radar(RepairCenter);
+	
+	if(shieldLevel < 0.5)
+	{
+		message("Structural integritty low, going to Repair Center", DisplayInfo);
+		goto(repair.position);
+		while(shieldLevel < 1)
+		{
+			wait(1);
+		}
+	}
+	else if (shieldLevel < 0.5 && radar(repair.category) == null)
+	{
+		message("Power Station/Captor not found.", DisplayError);
+	}
+	else if (shieldLevel < 0.5 && canbuild(repair.category) == false)
+	{
+		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+	}
+	
+	errmode(1);
+}
