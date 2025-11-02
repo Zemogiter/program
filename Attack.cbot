@@ -38,7 +38,7 @@ extern void object::Attack()
 	{
 		object house = radar(BotFactory);
 		turn(direction(house.position));
-		move(4);
+		move(-5);
 	}
 	
 	if((target = radar(cat)) == null)
@@ -48,6 +48,8 @@ extern void object::Attack()
 	
 	while((target = radar(cat)) != null)
 	{
+		maint();
+		
 		if(temperature > 0.8)
 		    hot = true;
 		if(temperature < 0.2)
@@ -77,18 +79,25 @@ extern void object::Attack()
 		if(gotoMode == false)
 		{
 			if(dis < 40 and abs(ang) < 20 and abs(dir) < 112.5)
-			    {
-				     turn(dir);
-				    }
-			    else
-			    {
-				     motor(1-dir/45,1+dir/45);
-				    }
+			{
+				 turn(dir);
+			}
+			else
+			{
+				 motor(1-dir/45,1+dir/45);
+			}
 		}
 		else
 		{
-			goto(space(target.position));
-			turn(direction(target.position));
+			if(dis < 40 and abs(ang) < 20 and abs(dir) < 112.5)
+			{
+				aim(ang);
+				turn(dir);
+			}
+			else
+			{
+				trygoto(space(target.position));
+			}
 		}
 		   
 		dir = direction(target.position);
@@ -294,19 +303,73 @@ void object::trygoto(point pos)
 		break;
 	}
 }
+void object::newgoto(point p){
+	bool b=true;
+	
+	while((this.position.z-topo(this.position))<5){
+		jet(0.3);
+	}
+	while(distance2d(this.position,p)>1){
+		turn(direction(p));
+		motor(0.5,0.5);
+		try{
+			if(topo(this.position)<0){
+				while(this.position.z<5){
+					jet(0.3);
+				}
+				while(this.position.z>5){
+					jet(-0.3);
+				}
+			}
+			else{
+				b=true;
+				while((this.position.z-topo(this.position))<5){
+					jet(0.3);
+				}
+				while((this.position.z-topo(this.position))>5){
+					jet(-0.3);
+				}
+				if(this.temperature>0.7){
+					jet(-0.3);
+					while((this.position.z-topo(this.position))>0);
+					jet(0);
+					while(this.temperature>0);
+				}
+			}
+		}catch((topo(this.position)<=0)&&(this.temperature>0.2)&&b){
+			jet(0);
+			motor(-0.5,-0.5);
+			while(topo(this.position)<=0);
+			motor(0,0);
+			jet(-0.3);
+			while((this.position.z-topo(this.position))>0);
+			jet(0);
+			while(this.temperature>0);
+			jet(0.3);
+			while((this.position.z-topo(this.position))<5);
+			motor(1,1);
+			while(topo(this.position)>=0);
+			b=false;
+		}
+	}
+	motor(0,0);
+	jet(-0.3);
+	while((this.position.z-topo(this.position))>0);
+	jet(0);
+	 }
 void object::Return()
 {
-	object ship = radar(SpaceShip);
-	if(ship != null)
+	object base = radar(SpaceShip);
+	if(base != null)
 	{
 		message("No hostiles on the map, going to the ship.");
-		goto(ship.position);
-		takeoff(ship);
+		goto(base.position);
+		takeoff(base);
 	}
 	else
 	{
 		message("No hostiles on the map, going to the base");
-		ship = radar(BlueFlag);
-		goto(ship.position);
+		base = radar(BlueFlag);
+		goto(space(base.position));
 	}
 }
