@@ -2,7 +2,7 @@ extern void object::FollowAndGuard()
 {
 	int allyType = WheeledGrabber; // put ally here (i.e. LeggedGrabber)
 	int keepCloseDist = 5;        // how far behind to follow
-	int parimeterToScan = 50;     // range to look for enemy
+	int perimeterToScan = 50;     // range to look for enemy
 	bool canScanSubsoil = true; // set to false if you dont want sniffers to sniff if they're following something
 	bool canBuild = true; // as above but for builders
 	int cat = PowerStation; //category of building to construct by the builder
@@ -18,7 +18,7 @@ extern void object::FollowAndGuard()
 	
 	object enemy;
 	
-	if(search(BotFactory,position,0,5) != null) //if the bot is fresh from factory, we have to move it away
+	if(search(BotFactory,position,0,3) != null) //if the bot is fresh from factory, we have to move it away
 	{
 		object house = radar(BotFactory);
 		turn(direction(house.position));
@@ -27,16 +27,16 @@ extern void object::FollowAndGuard()
 	
 	while(true)
 	{
-		enemy = radar(enemyList,0,360,0,parimeterToScan);
-		if(enemy == null)
+		enemy = radar(enemyList,0,360,0,perimeterToScan);
+		if(enemy == null and radar(allyType) != null)
 		{
-			follow(allyType,keepCloseDist,enemyList,canScanSubsoil, canBuild, cat);
+			follow(allyType, keepCloseDist, enemyList, canScanSubsoil, canBuild, cat);
 		}
 		else if (enemy != null and ShooterCheck() == true)
 		{
 			moveAndDestroy(enemy);
 		}
-		follow(allyType,keepCloseDist,enemyList,canScanSubsoil, canBuild, cat);
+		follow(allyType, keepCloseDist, enemyList, canScanSubsoil, canBuild, cat);
 	}
 }
 void object::follow(int allyType, int parimeter, int[] enemyList, bool canScanSubsoil, bool canBuild, int cat)
