@@ -1,126 +1,826 @@
-extern void object::New()
+/*
+Notes from the dev(s):
+
+Regarding the endmission() command when there is a SpaceShip on the map. From hexagonrecursion, colobot discord:
+If there is a space ship and the spaceship is selectable and there is no EndMissionTake ... immediat=1, endmission(01)  enables the spaceship to takeoff instead of ending the mission.
+Your options:
+1. The player has to press "take off" to end the mission
+2. Remove the spaceship
+3. Make the space ship non-selectable CreateObject type=SpaceShip selectable=0 ...
+4. Add an EndMissionTake that will never be satisfied with immediat=1. Example: EndMissionTake pos=0;0 dist=1000type=Me min=20 immediat=1
+
+produce() does not support object.shield or object.load as a parameter for the object to bespawned, so collecting those is pointless at the moment
+*/
+extern void object::LevelController() // script to be executed on LevelController, reads certain txt files in user directory, spawns object accordingly, waits for the right condition, then saves the objects on map to be spawned on the next mission, then ends the current mission/allows the player to take off
 {
+	ipf(10000);
+	while ( ismovie() != 0 ) // script should wait until the cutscenes are over
+	{
+		wait(1);
+	}
+	ObjectLoader();
+	//waiting until mission objectives are complete, EndMissionTake in scene.txt should be commented out (except for the Astronaut)
+	while()
+	{
+		message("DEBUG - mission objectives not finished yet.");
+		wait(30);
+	}
+	//comment out this message for public release!!!
+	message("DEBUG - Mission objectives finished. If this message is displayed otherwise, there is a error in LevelController script!", DisplayWarning);
+	wait(1);
+	ObjectSaver();
+	endmission(0,1);
+}
+void object::ObjectLoader()
+{
+	// handling grabbers
 	file handle();
-	handle.open("BotList.txt", "w");
+	handle.open("GrabberList.txt", "r");
+	
+	while (not handle.eof()) //while we haven't reached the end of the file
+	{
+		bool done = false;
+		string s = null;
+		point pos;
+		int cat;
+		float orientation;
+		string ccString;
+		string clString;
+		string debugString;
+		
+		while (done != true) //while we haven't reached the line that separates entities in txt files
+		{
+			done = false;
+			string s = handle.readln();
+			
+			if (strleft ( s, 8 ) == "Category")
+			{
+				string cString = s;
+				int len = strlen(cString);
+				string mid = strmid(s,10,len);
+				int val = strval(mid);
+				cat = val;
+			}
+			else if (strleft ( s, 9 ) == "PositionX")
+			{
+				string xString = s;
+				int len = strlen(xString);
+				pos.x = strval(strmid(s,11,len));
+			}
+			else if (strleft ( s, 9 ) == "PositionY")
+			{
+				string yString = s;
+				int len = strlen(yString);
+				pos.y = strval(strmid(s,11,len));
+			}
+			else if (strleft ( s, 9 ) == "PositionZ")
+			{
+				string zString = s;
+				int len = strlen(zString);
+				pos.z = strval(strmid(s,11,len));
+			}
+			else if (strleft ( s, 11 ) == "Orientation")
+			{
+				string oString = s;
+				int len = strlen(oString);
+				orientation = strval(strmid(s,13,len));
+			}
+			else if (strleft ( s, 12 ) == "CellCategory")
+			{
+				ccString = s;
+			}
+			else if (strleft ( s, 9 ) == "CellLevel")
+			{
+				clString = s;
+			}
+			else if (strleft(s,10) == "ObjectName")
+			{
+				debugString = s;
+			}
+			else
+			{
+				done = true;
+			}
+		}
+		if (handle.eof())
+		{
+			break;
+		}
+		message("DEBUG - Spawning " + debugString + " " + cat +" at " + pos + " at an angle of " + orientation + " with this cell parameters: " + FigureOutCell(ccString, clString));
+		produce(pos, orientation, cat, "", FigureOutCell(ccString, clString));
+	}
+	handle.close();
+	
+	// handling other bots
+	file handle2();
+	handle2.open("BotList.txt", "r");
+	
+	while (not handle2.eof()) //while we haven't reached the end of the file
+	{
+		bool done = false;
+		string s = null;
+		point pos;
+		int cat;
+		float orientation;
+		string ccString;
+		string clString;
+		string debugString;
+		
+		while (done != true) //while we haven't reached the line that separates entities in txt files
+		{
+			done = false;
+			string s = handle2.readln();
+			
+			if (strleft ( s, 8 ) == "Category")
+			{
+				string cString = s;
+				int len = strlen(cString);
+				string mid = strmid(s,10,len);
+				int val = strval(mid);
+				cat = val;
+			}
+			else if (strleft ( s, 9 ) == "PositionX")
+			{
+				string xString = s;
+				int len = strlen(xString);
+				pos.x = strval(strmid(s,11,len));
+			}
+			else if (strleft ( s, 9 ) == "PositionY")
+			{
+				string yString = s;
+				int len = strlen(yString);
+				pos.y = strval(strmid(s,11,len));
+			}
+			else if (strleft ( s, 9 ) == "PositionZ")
+			{
+				string zString = s;
+				int len = strlen(zString);
+				pos.z = strval(strmid(s,11,len));
+			}
+			else if (strleft ( s, 11 ) == "Orientation")
+			{
+				string oString = s;
+				int len = strlen(oString);
+				orientation = strval(strmid(s,13,len));
+			}
+			else if (strleft ( s, 12 ) == "CellCategory")
+			{
+				ccString = s;
+			}
+			else if (strleft ( s, 9 ) == "CellLevel")
+			{
+				clString = s;
+			}
+			else if (strleft(s,10) == "ObjectName")
+			{
+				debugString = s;
+			}
+			else
+			{
+				done = true;
+			}
+		}
+		if (handle2.eof())
+		{
+			break;
+		}
+		message("DEBUG - Spawning " + debugString + " " + cat + " at " + pos + " at an angle of " + orientation + " with this cell parameters: " + FigureOutCell(ccString, clString));
+		produce(pos, orientation, cat, "", FigureOutCell(ccString, clString));
+	}
+	handle2.close();
+	
+	// handling buildings with cell slots
+	file handle3();
+	handle3.open("CellBuildings.txt", "r");
+	
+	while (not handle3.eof()) //while we haven't reached the end of the file
+	{
+		bool done = false;
+		string s = null;
+		point pos;
+		int cat = 0;
+		float orientation;
+		float energy;
+		string ccString = "";
+		string clString = "";
+		string debugString;
+		
+		while (done != true) //while we haven't reached the line that separates entities in txt files
+		{
+			done = false;
+			string s = handle3.readln();
+			
+			if (strleft ( s, 8 ) == "Category")
+			{
+				string cString = s;
+				int len = strlen(cString);
+				string mid = strmid(s,10,len);
+				int val = strval(mid);
+				cat = val;
+			}
+			else if (strleft ( s, 9 ) == "PositionX")
+			{
+				string xString = s;
+				int len = strlen(xString);
+				pos.x = strval(strmid(s,11,len));
+			}
+			else if (strleft ( s, 9 ) == "PositionY")
+			{
+				string yString = s;
+				int len = strlen(yString);
+				pos.y = strval(strmid(s,11,len));
+			}
+			else if (strleft ( s, 9 ) == "PositionZ")
+			{
+				string zString = s;
+				int len = strlen(zString);
+				pos.z = strval(strmid(s,11,len));
+			}
+			else if (strleft ( s, 11 ) == "Orientation")
+			{
+				string oString = s;
+				int len = strlen(oString);
+				orientation = strval(strmid(s,13,len));
+			}
+			else if (strleft (s,6) == "Energy")
+			{
+				string eString = s;
+				int len = strlen(eString);
+				energy = strval(strmid(s,8,len));
+			}
+			else if (strleft ( s, 12 ) == "CellCategory")
+			{
+				ccString = s;
+			}
+			else if (strleft ( s, 9 ) == "CellLevel")
+			{
+				clString = s;
+			}
+			else if (strleft(s,10) == "ObjectName")
+			{
+				debugString = s;
+			}
+			else
+			{
+				done = true;
+			}
+		}
+		if (handle3.eof() or cat <= 0)
+		{
+			break;
+		}
+		if ((strfind(ccString, "PowerCell") != nan or strfind(ccString, "NuclearCell") != nan) and strlen(clString) != 0)
+		{
+			message("DEBUG - Spawning " + debugString + " " + cat + " at " + pos + " at an angle of " + orientation + " with this cell parameters: " + FigureOutCell(ccString, clString));
+			produce(pos, orientation, cat, "", FigureOutCell(ccString, clString));
+		}
+		else
+		{
+			message("DEBUG - Spawning " + debugString + " " + cat + " at " + pos + " at an angle of " + orientation);
+			produce(pos, orientation, cat, "");
+		}
+		ccString = "";
+		clString = "";
+	}
+	handle3.close();
+	
+	//handling other buildings
+	file handle4();
+	handle4.open("OtherBuildings.txt", "r");
+	
+	while (not handle4.eof()) //while we haven't reached the end of the file
+	{
+		bool done = false;
+		string s = null;
+		point pos;
+		int cat = 0;
+		float orientation;
+		float energy;
+		string debugString;
+		
+		while (done != true) //while we haven't reached the line that separates entities in txt files
+		{
+			done = false;
+			string s = handle4.readln();
+			
+			if (strleft ( s, 8 ) == "Category")
+			{
+				string cString = s;
+				int len = strlen(cString);
+				string mid = strmid(s,10,len);
+				int val = strval(mid);
+				cat = val;
+			}
+			else if (strleft ( s, 9 ) == "PositionX")
+			{
+				string xString = s;
+				int len = strlen(xString);
+				pos.x = strval(strmid(s,11,len));
+			}
+			else if (strleft ( s, 9 ) == "PositionY")
+			{
+				string yString = s;
+				int len = strlen(yString);
+				pos.y = strval(strmid(s,11,len));
+			}
+			else if (strleft ( s, 9 ) == "PositionZ")
+			{
+				string zString = s;
+				int len = strlen(zString);
+				pos.z = strval(strmid(s,11,len));
+			}
+			else if (strleft ( s, 11 ) == "Orientation")
+			{
+				string oString = s;
+				int len = strlen(oString);
+				orientation = strval(strmid(s,13,len));
+			}
+			else if (strleft (s,6) == "Energy")
+			{
+				string eString = s;
+				int len = strlen(eString);
+				energy = strval(strmid(s,8,len));
+			}
+			else if (strleft(s,10) == "ObjectName")
+			{
+				debugString = s;
+			}
+			else
+			{
+				done = true;
+			}
+		}
+		if (handle4.eof() or cat <= 0)
+		{
+			break;
+		}
+		message("DEBUG - Spawning " + debugString + " " + cat + " at " + pos + " at an angle of " + orientation);
+		produce(pos, orientation, cat, "");
+	}
+	handle4.close();
+	
+	//handling objects that can be grabbed
+	
+	file handle5();
+	handle5.open("ObjectList.txt", "r");
+	
+	while (not handle5.eof()) //while we haven't reached the end of the file
+	{
+		bool done = false;
+		string s = null;
+		point pos;
+		int cat;
+		float orientation;
+		float energy;
+		string ccString;
+		string clString;
+		string debugString;
+		
+		while (done != true) //while we haven't reached the line that separates entities in txt files
+		{
+			done = false;
+			string s = handle5.readln();
+			
+			if (strleft ( s, 8 ) == "Category")
+			{
+				string cString = s;
+				int len = strlen(cString);
+				string mid = strmid(s,10,len);
+				int val = strval(mid);
+				cat = val;
+			}
+			else if (strleft ( s, 9 ) == "PositionX")
+			{
+				string xString = s;
+				int len = strlen(xString);
+				pos.x = strval(strmid(s,11,len));
+			}
+			else if (strleft ( s, 9 ) == "PositionY")
+			{
+				string yString = s;
+				int len = strlen(yString);
+				pos.y = strval(strmid(s,11,len));
+			}
+			else if (strleft ( s, 9 ) == "PositionZ")
+			{
+				string zString = s;
+				int len = strlen(zString);
+				pos.z = strval(strmid(s,11,len));
+			}
+			else if (strleft ( s, 11 ) == "Orientation")
+			{
+				string oString = s;
+				int len = strlen(oString);
+				orientation = strval(strmid(s,13,len));
+			}
+			else if (strleft (s,6) == "Energy")
+			{
+				string eString = s;
+				int len = strlen(eString);
+				energy = strval(strmid(s,8,len));
+			}
+			else if (strleft(s,10) == "ObjectName")
+			{
+				debugString = s;
+			}
+			else
+			{
+				done = true;
+			}
+		}
+		if (handle5.eof())
+		{
+			break;
+		}
+		message("DEBUG - Spawning " + debugString + " " + cat + " at " + pos + " at an angle of " + orientation + " at power level: " + energy);
+		produce(pos, orientation, cat, "", energy);
+	}
+	handle5.close();
+	
+	//handling aliens
+	file handle6();
+	handle6.open("AlienList.txt", "r");
+	
+	while (not handle6.eof()) //while we haven't reached the end of the file
+	{
+		bool done = false;
+		string s = null;
+		point pos;
+		int cat;
+		float orientation;
+		string debugString;
+		
+		while (done != true) //while we haven't reached the line that separates entities in txt files
+		{
+			done = false;
+			string s = handle6.readln();
+			
+			if (strleft ( s, 8 ) == "Category")
+			{
+				string cString = s;
+				int len = strlen(cString);
+				string mid = strmid(s,10,len);
+				int val = strval(mid);
+				cat = val;
+			}
+			else if (strleft ( s, 9 ) == "PositionX")
+			{
+				string xString = s;
+				int len = strlen(xString);
+				pos.x = strval(strmid(s,11,len));
+			}
+			else if (strleft ( s, 9 ) == "PositionY")
+			{
+				string yString = s;
+				int len = strlen(yString);
+				pos.y = strval(strmid(s,11,len));
+			}
+			else if (strleft ( s, 9 ) == "PositionZ")
+			{
+				string zString = s;
+				int len = strlen(zString);
+				pos.z = strval(strmid(s,11,len));
+			}
+			else if (strleft ( s, 11 ) == "Orientation")
+			{
+				string oString = s;
+				int len = strlen(oString);
+				orientation = strval(strmid(s,13,len));
+			}
+			else if (strleft(s,10) == "ObjectName")
+			{
+				debugString = s;
+			}
+			else
+			{
+				done = true;
+			}
+		}
+		if (handle6.eof())
+		{
+			break;
+		}
+		message("DEBUG - Spawning " + debugString + " " + cat + " at " + pos + " at an angle of " + orientation);
+		produce(pos, orientation, cat, "");
+	}
+	handle6.close();
+	
+	//handling other objects
+	file handle7();
+	handle7.open("MiscList.txt", "r");
+	
+	while (not handle7.eof()) //while we haven't reached the end of the file
+	{
+		bool done = false;
+		string s = null;
+		point pos;
+		int cat;
+		float orientation;
+		string debugString;
+		
+		while (done != true) //while we haven't reached the line that separates entities in txt files
+		{
+			done = false;
+			string s = handle7.readln();
+			
+			if (strleft ( s, 8 ) == "Category")
+			{
+				string cString = s;
+				int len = strlen(cString);
+				string mid = strmid(s,10,len);
+				int val = strval(mid);
+				cat = val;
+			}
+			else if (strleft ( s, 9 ) == "PositionX")
+			{
+				string xString = s;
+				int len = strlen(xString);
+				pos.x = strval(strmid(s,11,len));
+			}
+			else if (strleft ( s, 9 ) == "PositionY")
+			{
+				string yString = s;
+				int len = strlen(yString);
+				pos.y = strval(strmid(s,11,len));
+			}
+			else if (strleft ( s, 9 ) == "PositionZ")
+			{
+				string zString = s;
+				int len = strlen(zString);
+				pos.z = strval(strmid(s,11,len));
+			}
+			else if (strleft ( s, 11 ) == "Orientation")
+			{
+				string oString = s;
+				int len = strlen(oString);
+				orientation = strval(strmid(s,13,len));
+			}
+			else if (strleft(s,10) == "ObjectName")
+			{
+				debugString = s;
+			}
+			else
+			{
+				done = true;
+			}
+		}
+		if (handle7.eof())
+		{
+			break;
+		}
+		message("DEBUG - Spawning " + debugString + " " + cat + " " + cat +" at " + pos + " at an angle of " + orientation);
+		produce(pos, orientation, cat, "");
+	}
+	handle7.close();
+}
+float object::FigureOutCell(string ccString, string clString) //since produce() does not know what to do with object.cell, we need to extract usefull information from it
+{
+	int cellCategory;
+	
+	if (strfind(ccString, "PowerCell") != nan)
+	{
+		cellCategory = PowerCell;
+	}
+	else if (strfind(ccString, "NuclearCell") != nan)
+	{
+		cellCategory = NuclearCell;
+	}
+	else
+	{
+		cellCategory = -1;
+	}
+	
+	string cellLevelString = strmid(clString,11,strlen(clString));
+	float cellLevel = strval(cellLevelString);
+	
+	if(cellCategory == PowerCell)
+	{
+		float usedEnergy = 1-cellLevel;
+		float returnValue = 1-usedEnergy;
+		return returnValue;
+	}
+	else if(cellCategory == NuclearCell)
+	{
+		float usedEnergy = 100-cellLevel;
+		float returnValue = 100-usedEnergy;
+		return returnValue;
+	}
+	else
+	{
+		return -1; //remember to change it once produce() power cell parameter works as intended
+	}
+	return nan;
+}
+void object::ObjectSaver()
+{
+	// handling grabbers
+	file handle();
+	handle.open("GrabberList.txt", "w");
 	
 	int[] list;
 	int i = 0;
 	
-	list[i++] = PracticeBot;
 	list[i++] = WheeledGrabber;
 	list[i++] = TrackedGrabber;
 	list[i++] = WingedGrabber;
 	list[i++] = LeggedGrabber;
-	list[i++] = WheeledSniffer;
-	list[i++] = TrackedSniffer;
-	list[i++] = WingedSniffer;
-	list[i++] = LeggedSniffer;
-	list[i++] = WheeledShooter;
-	list[i++] = TrackedShooter;
-	list[i++] = WingedShooter;
-	list[i++] = LeggedShooter;
-	list[i++] = WheeledOrgaShooter;
-	list[i++] = TrackedOrgaShooter;
-	list[i++] = WingedOrgaShooter;
-	list[i++] = LeggedOrgaShooter;
-	list[i++] = Recycler;
-	list[i++] = Thumper;
-	list[i++] = Shielder;
-	list[i++] = PhazerShooter;
-	list[i++] = WheeledBuilder;
-	list[i++] = TrackedBuilder;
-	list[i++] = WingedBuilder;
-	list[i++] = LeggedBuilder;
 	
-	object[] botList = radarall(list);
+	object[] grabberList = radarall(list);
+	
+	for(int j = 0;j < sizeof(grabberList);j++)
+	{
+		int cat = grabberList[j].category;
+		point pos = grabberList[j].position;
+		float orientation = grabberList[j].orientation;
+		object cell = grabberList[j].energyCell;
+		
+		if (load != null)
+		{
+			handle.writeln("Category: " + (cat+0)+"");
+			handle.writeln("PositionX: " + pos.x);
+			handle.writeln("PositionY: " + pos.y);
+			handle.writeln("PositionZ: " + pos.z);
+			handle.writeln("Orientation: " + orientation);
+			handle.writeln("CellCategory: " + cell.category);
+			handle.writeln("CellLevel: " + cell.energyLevel);
+			handle.writeln("ObjectName: " + cat);
+			handle.writeln("SEPARATOR");
+		}
+		else
+		{
+			handle.writeln("Category: " + (cat+0)+"");
+			handle.writeln("PositionX: " + pos.x);
+			handle.writeln("PositionY: " + pos.y);
+			handle.writeln("PositionZ: " + pos.z);
+			handle.writeln("Orientation: " + orientation);
+			handle.writeln("CellCategory: " + cell.category);
+			handle.writeln("CellLevel: " + cell.energyLevel);
+			handle.writeln("ObjectName: " + cat);
+			handle.writeln("SEPARATOR");
+		}
+	}
+	handle.close();
+	
+	// handling other bots
+	file handle2();
+	handle2.open("BotList.txt", "w");
+	
+	int[] list2;
+	i = 0;
+	
+	list2[i++] = PracticeBot;
+	list2[i++] = WheeledSniffer;
+	list2[i++] = TrackedSniffer;
+	list2[i++] = WingedSniffer;
+	list2[i++] = LeggedSniffer;
+	list2[i++] = WheeledShooter;
+	list2[i++] = TrackedShooter;
+	list2[i++] = WingedShooter;
+	list2[i++] = LeggedShooter;
+	list2[i++] = WheeledOrgaShooter;
+	list2[i++] = TrackedOrgaShooter;
+	list2[i++] = WingedOrgaShooter;
+	list2[i++] = LeggedOrgaShooter;
+	list2[i++] = Recycler;
+	list2[i++] = Thumper;
+	list2[i++] = Shielder;
+	list2[i++] = PhazerShooter;
+	list2[i++] = WheeledBuilder;
+	list2[i++] = TrackedBuilder;
+	list2[i++] = WingedBuilder;
+	list2[i++] = LeggedBuilder;
+	
+	object[] botList = radarall(list2);
 	
 	for(int j = 0;j < sizeof(botList);j++)
 	{
 		int cat = botList[j].category;
 		point pos = botList[j].position;
 		float orientation = botList[j].orientation;
-		float energy = botList[j].energyLevel;
-		float shieldL = botList[j].shieldLevel;
 		object cell = botList[j].energyCell;
-		object load = botList[j].load;
 		
-		if (load != null)
-		{
-			load = botList[j].load;
-			handle.writeln("Category: " + cat + "Position: " + pos + "Orientation: " + orientation + "Energy: " + energy + "Shield: " + shieldL + "Cell: " + cell + "Load: " + load);
-		}
-		else
-		{
-			handle.writeln("Category: " + cat + "Position: " + pos + "Orientation: " + orientation + "Energy: " + energy + "Shield: " + shieldL + "Cell: " + cell);
-		}
-	}
-	handle.close();
-	
-	// handling buildings
-	file handle2();
-	handle2.open("BuildingList.txt", "w");
-	
-	int[] list2;
-	i = 0;
-	
-	list2[i++] = BotFactory;
-	list2[i++] = ResearchCenter;
-	list2[i++] = ExchangePost;
-	list2[i++] = RadarStation;
-	list2[i++] = RepairCenter;
-	list2[i++] = DefenseTower;
-	list2[i++] = AutoLab;
-	list2[i++] = PowerStation;
-	list2[i++] = PowerPlant;
-	list2[i++] = Converter;
-	list2[i++] = Derrick;
-	list2[i++] = PowerCaptor;
-	list2[i++] = NuclearPlant;
-	
-	object[] buildingList = radarall(list2);
-	
-	for(int j = 0;j < sizeof(buildingList);j++)
-	{
-		int cat = buildingList[j].category;
-		point pos = buildingList[j].position;
-		float orientation = buildingList[j].orientation;
-		float energy = buildingList[j].energyLevel;
-		float shieldL = buildingList[j].shieldLevel;
-		object cell;
-		if (buildingList[j].energyCell != null)
-		{
-			cell = buildingList[j].energyCell;
-			handle2.writeln("Category: " + cat + "Position: " + pos + "Orientation: " + orientation + "Energy: " + energy + "Shield: " + shieldL + "Cell: " + cell);
-		}
-		else
-		{
-			handle2.writeln("Category: " + cat + "Position: " + pos + "Orientation: " + orientation + "Energy: " + energy + "Shield: " + shieldL);
-		}
-		
+		handle2.writeln("Category: " + (cat+0)+"");
+		handle2.writeln("PositionX: " + pos.x);
+		handle2.writeln("PositionY: " + pos.y);
+		handle2.writeln("PositionZ: " + pos.z);
+		handle2.writeln("Orientation: " + orientation);
+		handle2.writeln("CellCategory: " + cell.category);
+		handle2.writeln("CellLevel: " + cell.energyLevel);
+		handle2.writeln("ObjectName: " + cat);
+		handle2.writeln("SEPARATOR");
 	}
 	handle2.close();
 	
-	//handling objects that can be grabbed
+	// handling buildings with cell slots
 	file handle3();
-	handle3.open("ObjectList.txt", "w");
+	handle3.open("CellBuildings.txt", "w");
 	
 	int[] list3;
 	i = 0;
 	
-	list3[i++] = TitaniumOre;
-	list3[i++] = UraniumOre;
-	list3[i++] = Titanium;
-	list3[i++] = PowerCell;
-	list3[i++] = NuclearCell;
-	list3[i++] = OrgaMatter;
-	list3[i++] = BlackBox;
-	list3[i++] = TNT;
-	list3[i++] = KeyA;
-	list3[i++] = KeyB;
-	list3[i++] = KeyC;
-	list3[i++] = KeyD;
+	list3[i++] = ResearchCenter;
+	list3[i++] = DefenseTower;
+	list3[i++] = PowerPlant;
+	list3[i++] = NuclearPlant;
 	
-	object[] objectList = radarall(list3);
+	object[] cellBuildings = radarall(list3);
+	
+	for(int j = 0;j < sizeof(cellBuildings);j++)
+	{
+		int cat = cellBuildings[j].category;
+		point pos = cellBuildings[j].position;
+		float orientation = cellBuildings[j].orientation;
+		float energy = cellBuildings[j].energyLevel;
+		object cell = cellBuildings[j].energyCell;
+		
+		if (cell != null)
+		{
+			cell = cellBuildings[j].energyCell;
+			handle3.writeln("Category: " + (cat+0)+"");
+			handle3.writeln("PositionX: " + pos.x);
+			handle3.writeln("PositionY: " + pos.y);
+			handle3.writeln("PositionZ: " + pos.z);
+			handle3.writeln("Orientation: " + orientation);
+			handle3.writeln("Energy: " + energy);
+			handle3.writeln("CellCategory: " + cell.category);
+			handle3.writeln("CellLevel: " + cell.energyLevel);
+			handle3.writeln("ObjectName: " + cat);
+			handle3.writeln("SEPARATOR");
+		}
+		else
+		{
+			handle3.writeln("Category: " + (cat+0)+"");
+			handle3.writeln("PositionX: " + pos.x);
+			handle3.writeln("PositionY: " + pos.y);
+			handle3.writeln("PositionZ: " + pos.z);
+			handle3.writeln("Orientation: " + orientation);
+			handle3.writeln("Energy: " + energy);
+			handle3.writeln("ObjectName: " + cat);
+			handle3.writeln("SEPARATOR");
+		}
+		
+	}
+	handle3.close();
+	
+	//handling other buildings
+	file handle4();
+	handle4.open("OtherBuildings.txt", "w");
+	
+	int[] list4;
+	i = 0;
+	
+	list4[i++] = BotFactory;
+	list4[i++] = ExchangePost;
+	list4[i++] = RadarStation;
+	list4[i++] = RepairCenter;
+	list4[i++] = AutoLab;
+	list4[i++] = PowerStation;
+	list4[i++] = Converter;
+	list4[i++] = Derrick;
+	list4[i++] = PowerCaptor;
+	
+	object[] otherBuildings = radarall(list4);
+	
+	for(int j = 0;j < sizeof(otherBuildings);j++)
+	{
+		int cat = otherBuildings[j].category;
+		point pos = otherBuildings[j].position;
+		float orientation = otherBuildings[j].orientation;
+		float energy = otherBuildings[j].energyLevel;
+		float shieldL = otherBuildings[j].shieldLevel;
+		
+		handle4.writeln("Category: " + (cat+0)+"");
+		handle4.writeln("PositionX: " + pos.x);
+		handle4.writeln("PositionY: " + pos.y);
+		handle4.writeln("PositionZ: " + pos.z);
+		handle4.writeln("Orientation: " + orientation);
+		handle4.writeln("Energy: " + energy);
+		handle4.writeln("ObjectName: " + cat);
+		handle4.writeln("SEPARATOR");
+	}
+	handle4.close();
+	
+	//handling objects that can be grabbed
+	file handle5();
+	handle5.open("ObjectList.txt", "w");
+	
+	int[] list5;
+	i = 0;
+	
+	list5[i++] = TitaniumOre;
+	list5[i++] = UraniumOre;
+	list5[i++] = Titanium;
+	list5[i++] = PowerCell;
+	list5[i++] = NuclearCell;
+	list5[i++] = OrgaMatter;
+	list5[i++] = BlackBox;
+	list5[i++] = TNT;
+	list5[i++] = KeyA;
+	list5[i++] = KeyB;
+	list5[i++] = KeyC;
+	list5[i++] = KeyD;
+	
+	object[] objectList = radarall(list5);
 	
 	for(int j = 0;j < sizeof(objectList);j++)
 	{
@@ -129,55 +829,69 @@ extern void object::New()
 		float orientation = objectList[j].orientation;
 		float energy = objectList[j].energyLevel;
 		
-		handle3.writeln("Category: " + cat + "Position: " + pos + "Orientation: " + orientation + "Energy: " + energy);
+		handle5.writeln("Category: " + (cat+0)+"");
+		handle5.writeln("PositionX: " + pos.x);
+		handle5.writeln("PositionY: " + pos.y);
+		handle5.writeln("PositionZ: " + pos.z);
+		handle5.writeln("Orientation: " + orientation);
+		handle5.writeln("Energy: " + energy);
+		handle5.writeln("ObjectName: " + cat);
+		handle5.writeln("SEPARATOR");
 	}
-	handle3.close();
+	handle5.close();
 	
 	//handling aliens
-	//file handle4();
-	//handle4.open("AlienList.txt", "w");
-	//
-	//int[] list4;
-	//i = 0;
-	//
-	//list4[i++] = AlienQueen;
-	//list4[i++] = AlienEgg;
-	//list4[i++] = AlienAnt;
-	//list4[i++] = AlienSpider;
-	//list4[i++] = AlienWasp;
-	//list4[i++] = AlienWorm;
-	//
-	//object[] alienList = radarall(list4);
-	//
-	//for(int j = 0;j < sizeof(alienList);j++)
-	//{
-	//    int cat = alienList[j].category;
-	//    point pos = alienList[j].position;
-	//    float orientation = alienList[j].orientation;
-	//
-	//    handle4.writeln("Category: " + cat + "Position: " + pos + "Orientation: " + orientation);
-	//}
-	//handle4.close();
 	
-	//handling other objects
-	file handle5();
-	handle5.open("MiscList.txt", "w");
+	file handle6();
+	handle6.open("AlienList.txt", "w");
 	
-	int[] list5;
+	int[] list6;
 	i = 0;
 	
-	list5[i++] = BlueFlag;
-	list5[i++] = RedFlag;
-	list5[i++] = GreenFlag;
-	list5[i++] = YellowFlag;
-	list5[i++] = VioletFlag;
-	list5[i++] = WayPoint;
-	list5[i++] = Target2;
-	list5[i++] = PowerSpot;
-	list5[i++] = TitaniumSpot;
-	list5[i++] = UraniumSpot;
+	list6[i++] = AlienQueen;
+	list6[i++] = AlienEgg;
+	list6[i++] = AlienAnt;
+	list6[i++] = AlienSpider;
+	list6[i++] = AlienWasp;
+	list6[i++] = AlienWorm;
 	
-	object[] miscList = radarall(list5);
+	object[] alienList = radarall(list6);
+	
+	for(int j = 0;j < sizeof(alienList);j++)
+	{
+		int cat = alienList[j].category;
+		point pos = alienList[j].position;
+		float orientation = alienList[j].orientation;
+		
+		handle6.writeln("Category: " + (cat+0)+"");
+		handle6.writeln("PositionX: " + pos.x);
+		handle6.writeln("PositionY: " + pos.y);
+		handle6.writeln("PositionZ: " + pos.z);
+		handle6.writeln("Orientation: " + orientation);
+		handle6.writeln("ObjectName: " + cat);
+		handle6.writeln("SEPARATOR");
+	}
+	handle6.close();
+	
+	//handling other objects
+	file handle7();
+	handle7.open("MiscList.txt", "w");
+	
+	int[] list7;
+	i = 0;
+	
+	list7[i++] = BlueFlag;
+	list7[i++] = RedFlag;
+	list7[i++] = GreenFlag;
+	list7[i++] = YellowFlag;
+	list7[i++] = VioletFlag;
+	list7[i++] = WayPoint;
+	list7[i++] = Target2;
+	list7[i++] = PowerSpot;
+	list7[i++] = TitaniumSpot;
+	list7[i++] = UraniumSpot;
+	
+	object[] miscList = radarall(list7);
 	
 	for(int j = 0;j < sizeof(miscList);j++)
 	{
@@ -185,9 +899,13 @@ extern void object::New()
 		point pos = miscList[j].position;
 		float orientation = miscList[j].orientation;
 		
-		handle5.writeln("Category: " + cat + "Position: " + pos + "Orientation: " + orientation);
+		handle7.writeln("Category: " + (cat+0)+"");
+		handle7.writeln("PositionX: " + pos.x);
+		handle7.writeln("PositionY: " + pos.y);
+		handle7.writeln("PositionZ: " + pos.z);
+		handle7.writeln("Orientation: " + orientation);
+		handle7.writeln("ObjectName: " + cat);
+		handle7.writeln("SEPARATOR");
 	}
-	handle5.close();
-	
-	
+	handle7.close();
 }
