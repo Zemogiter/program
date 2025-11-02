@@ -1,0 +1,939 @@
+extern void object::CollectRawResources()
+{
+	//To-do: figure out why Subber takes the wrong UraniumOre
+	//To-do: test the LightningCheck()
+	
+	//CONFIG
+	int resourceToCollect = TitaniumOre; //what raw resource should be collected, choose between TitaniumOre and UraniumOre
+	int targetAmount = 10; //how many Titanium cubes is needed?
+	//not implemented yet
+	//bool countAtBase = false; //if true, bot will only count Titanium cubes/Nuclear cells that are within given distance from base
+	//float baseDistance = 30; //distance from a object that counts as a base area
+	//int baseObject = BlueFlag; //object that marks the base, bot will count starting here until baseDistance
+	//back to implemented
+	bool continousMode = false; //if true, bot will ignore targetAmount and work endlessly
+	bool cooperativeMode = false; //set to true if you have multiple bots gathering TitaniumOre/UraniumOre
+	bool sendToPost = false; //if set to true, grabber will go the nearest exchange post and report the number of found Titanium ores (if more than one).
+	float triggerValue = 0.5; //grabber will go rechare/switch it's Power Cell once it reaches this level
+	bool goToGoal = false; //some missions may require to transport titanium cubes to GoalArea from Converter, in that case set this to true
+	int crashMode = -1; //changes the way bot reacts on colision with another object, may disable path-finding. -1 is the default. Check the list above the trygoto() function to see what options are available
+	bool verboseMode = true; //if true, the program will display additional messages on screen, set to false if you find it anoying
+	//END OF CONFIG
+	
+	point nullPoint(9999,9999,999);
+	
+	while (ResourceCounter(resourceToCollect, continousMode, targetAmount) == true or continousMode == true) //Main loop
+	{
+		//Uncomment the line below if you're on a map with lightning strikes
+		//LightningCheck(crashMode);
+		
+		point alien = AyyCheck(position, verboseMode);
+		point derrick = DerrickCheck(resourceToCollect);
+		//point derrickOre = DerrickCheck2(derrick, resourceToCollect);
+		int oreCount = sizeof(radarall(resourceToCollect));
+		
+		Mainteneance(triggerValue, crashMode, verboseMode);
+		if (oreCount > 1) //there's no point in displaying/posting that if derrick is the only source of ore
+		{
+			message("Number of ores on map: " + oreCount);
+			object post = radar(ExchangePost);
+			if(sendToPost == true && post != null && load == null) //it dosent make sense for the grabber to report while holding an ore
+			{
+				trygoto(space(post.position), crashMode, verboseMode);
+				send("TitaniumOnMap",oreCount,20);
+			}
+		}
+		if (load != null && load.category == resourceToCollect) //taking care of weird cases first
+		{
+			if (verboseMode == true)
+			{
+				message("Scenario 0 - bot already has the ore.");
+			}
+			ConverterHandler(cooperativeMode, goToGoal, crashMode, resourceToCollect, verboseMode);
+		}
+		
+		if (oreCount == 0) //no ores and ore-mining derricks on map
+		{
+			message("No surface ores or derricks that mine " + resourceToCollect, DisplayWarning);
+			// code below handles situations when the bot is occupying a recharge facility while reciving a no ore warning (lkey after Mainteneance() function finishes)
+			int list[], i;
+			object power;
+			
+			i = 0;
+			list[i++] = PowerStation;
+			list[i++] = PowerCaptor;
+			
+			power = radar(list);
+			
+			if(power != null && distance(position,power.position) < 3)
+			{
+				trygoto(space(power.position), crashMode, verboseMode);
+			}
+			break;
+		}
+		//If derrick exists, is not the only source for a titanium ore and the surface ore is unsafe due to alien presence, grabber will go to the derrick
+		if (alien != nullPoint && distance(OreCheck(cooperativeMode, resourceToCollect, verboseMode), alien) < 40 && oreCount > 1)
+		{
+			message("Scenario 1 - going to derrick because surface ore is unsafe.");
+			trygoto(derrick, crashMode, verboseMode);
+			ClawCheck(cooperativeMode, triggerValue, crashMode, resourceToCollect, verboseMode);
+			Mainteneance(triggerValue,crashMode,verboseMode);
+			ConverterHandler(cooperativeMode, goToGoal, crashMode, resourceToCollect, verboseMode);
+		}
+		//Inversion of the above - if derrick is less safe, bot goes to surface ore instead
+		else if (alien != nullPoint && derrick != nullPoint && distance(OreCheck(cooperativeMode, resourceToCollect, verboseMode), alien) > 40 && oreCount > 1) 
+		{
+			message("Scenario 2 - going to surface ore because derrick is unsafe.");
+			ClawCheck(cooperativeMode, triggerValue, crashMode, resourceToCollect, verboseMode);
+			Mainteneance(triggerValue,crashMode,verboseMode);
+			ConverterHandler(cooperativeMode, goToGoal, crashMode, resourceToCollect, verboseMode);
+		}
+		//If derrick exist and is the only source of titanium ore, grabber will go to the derrick, also checks if aliens exist
+		else if (derrick != nullPoint && oreCount == 1) 
+		{
+			if(alien == nullPoint)
+			{
+				message("Scenario 3 - going to derrick because it's the only option - no hostiles found.");
+			}
+			else
+			{
+				message("Scenario 3a - going to derrick because it's the only option - there are hostiles on map.");
+			}
+			trygoto(derrick, crashMode, verboseMode);
+			ClawCheck(cooperativeMode, triggerValue, crashMode, resourceToCollect, verboseMode);
+			Mainteneance(triggerValue,crashMode,verboseMode);
+			ConverterHandler(cooperativeMode, goToGoal, crashMode, resourceToCollect, verboseMode);
+		}
+		else if (derrick == nullPoint && oreCount > 0) //no derrick, surface ore exist, grabber will work as normal
+		{
+			if(alien == nullPoint)
+			{
+				message("Scenario 4 - going to surface ore because it's the only option - no hostiles found.");
+			}
+			else
+			{
+				message("Scenario 4a - going to surface ore because it's the only option - there are hostiles on map.");
+			}
+			ClawCheck(cooperativeMode, triggerValue, crashMode, resourceToCollect, verboseMode);
+			Mainteneance(triggerValue,crashMode,verboseMode);
+			ConverterHandler(cooperativeMode, goToGoal, crashMode, resourceToCollect, verboseMode);
+		}
+		//Derrick exists and it's closer than surface ore
+		else if (derrick != nullPoint && distance(position, OreCheck(cooperativeMode, resourceToCollect, verboseMode)) > distance(position, derrick)) 
+		{
+			if(alien == nullPoint)
+			{
+				message("Scenario 5 - going to the derrick because it's closer - no hostiles found.");
+			}
+			else
+			{
+				message("Scenario 5a - going to the derrick because it's closer - there are hostiles on map.");
+			}
+			ClawCheck(cooperativeMode, triggerValue, crashMode, resourceToCollect, verboseMode);
+			Mainteneance(triggerValue,crashMode,verboseMode);
+			ConverterHandler(cooperativeMode, goToGoal, crashMode, resourceToCollect, verboseMode);
+		}
+		//A rare case when derrick exists but surface ores are better located, also checks if aliens exist
+		else if (derrick != nullPoint && distance(position, OreCheck(cooperativeMode, resourceToCollect, verboseMode)) < distance(position, derrick)) 
+		{
+			if(alien == nullPoint)
+			{
+				message("Scenario 5 - going to surface ore because it's closer - no hostiles found.");
+			}
+			else
+			{
+				message("Scenario 5a - going to surface ore because it's closer - there are hostiles on map.");
+			}
+			ClawCheck(cooperativeMode, triggerValue, crashMode, resourceToCollect, verboseMode);
+			Mainteneance(triggerValue,crashMode,verboseMode);
+			ConverterHandler(cooperativeMode, goToGoal, crashMode, resourceToCollect, verboseMode);
+		}
+	}
+}
+bool object::ResourceCounter(int resourceToCollect, bool continousMode, int targetAmount) //counts up numbers of existing Titanium cubes or Nuclear cells and acts accordingly
+{
+	int resourceToCount;
+	
+	if(resourceToCollect == TitaniumOre)
+	{
+		resourceToCount = Titanium;
+	}
+	else
+	{
+		resourceToCount = NuclearCell;
+	}
+	if(continousMode == false && sizeof(radarall(resourceToCount)) < targetAmount)
+	{
+		if(resourceToCollect == TitaniumOre)
+		{
+			message("We're at " + sizeof(radarall(Titanium)) + " Titanium cubes, quota is " + targetAmount);
+			return true;
+		}
+		else
+		{
+			message("We're at " + sizeof(radarall(NuclearCell)) + " Nuclear cells, quota is " + targetAmount);
+			return true;
+		}
+	}
+	if(sizeof(radarall(resourceToCount)) >= targetAmount)
+	{
+		if(resourceToCollect == TitaniumOre)
+		{
+			message("We have reached the quota of " + targetAmount + " Titanium cubes, halting the script.", DisplayInfo);
+			return false;
+		}
+		else
+		{
+			message("We have reached the quota of " + targetAmount + " Nuclear cells, halting the script.", DisplayInfo);
+			return false;
+		}
+	}
+	return false;
+}
+void object::Mainteneance(float triggerValue, int crashMode, bool verboseMode)
+{
+	errmode(0);
+	
+	int list[], cellList[];
+	object power, repair, cell;
+	
+	list[0] = PowerStation;
+	list[1] = PowerCaptor;
+	
+	power = radar(list);
+	
+	cellList[0] = PowerCell;
+	cellList[1] = NuclearCell;
+	
+	cell = radar(cellList);
+	
+	//checking for batteries first, in case they're the only way to recharge a bot or they're more accessible
+	if (this.category != Subber)
+	{
+		//no power facility on the map
+		if (power == null) 
+		{
+			if (this.energyCell.energyLevel <= triggerValue && cell.energyLevel >= this.energyCell.energyLevel && cell.energyLevel >= triggerValue && NuclearCellCheck(cell) == true)
+			{
+				if (cell.category == PowerCell)
+				{
+					message("CollectTitanium4() - " + this.category + " " + this.id + " " + " - No recharge facility found - swapping with better PowerCell.");
+				}
+				else if (cell.category == NuclearCell)
+				{
+					message("CollectTitanium4() - " + this.category + " " + this.id + " " + " - No recharge facility found - swapping with better NuclearCell.");
+				}
+				trygoto(cell.position, crashMode, verboseMode);
+				if (load != null)
+				{
+					turn(90);
+					drop();
+					turn(-90);
+				}
+				grab();
+				drop(Behind);
+				grab(EnergyCell);
+				drop();
+				grab(Behind);
+				drop(EnergyCell);
+			}
+		}
+		//power facility exists but cell is closer
+		else if (power != null && cell != null && distance(position, cell.position) < distance(position, power.position)) 
+		{
+			if (this.energyCell.energyLevel <= triggerValue && cell.energyLevel >= this.energyCell.energyLevel && cell.energyLevel >= triggerValue && NuclearCellCheck(cell) == true)
+			{
+				if (cell.category == PowerCell)
+				{
+					message("CollectTitanium4() - " + this.category + " " + this.id + " " + " - Can't reach power facility or a PowerCell is closer.");
+				}
+				else if (cell.category == NuclearCell)
+				{
+					message("CollectTitanium4() - " + this.category + " " + this.id + " " + " - Can't reach power facility or a NuclearCell is closer.");
+				}
+				trygoto(cell.position, crashMode, verboseMode);
+				if (load != null)
+				{
+					turn(90);
+					drop();
+					turn(-90);
+				}
+				grab();
+				drop(Behind);
+				grab(EnergyCell);
+				drop();
+				grab(Behind);
+				drop(EnergyCell);
+			}
+		}
+	}
+	
+	//going to recharge facility
+	if(power != null && energyCell.energyLevel < triggerValue && energyCell.category != NuclearCell)
+	{
+		message("CollectTitanium4() - " + this.category + " " + this.id + " " + " - Battery low, going to the recharge facility");
+		if(search(Any,power.position,0,2,1,FilterOnlyLanding | FilterFriendly) != null) //if there is a object (most likey another bot) on the recharge facility
+		{
+			if(verboseMode == true)
+			{
+				message("CollectTitanium4() - " + this.category + " " + this.id + " " + " - Something is close to the recharge facility, going to the nearby location to avoid potential collisions.");
+			}
+			trygoto(space(power.position),crashMode, verboseMode);
+		}
+		trygoto(power.position,crashMode, verboseMode);
+		while(energyCell.energyLevel < 1)
+		{
+			wait(1);
+		}
+	}
+	else if (energyCell.energyLevel < triggerValue && power == null && energyCell.category == PowerCell) //checking if we have power cell so that we wont display this error needlessly
+	{
+		message("CollectTitanium4() - " + this.category + " " + this.id + " " + " - Power Station/Captor not found.", DisplayError);
+	}
+	else if (energyCell.energyLevel < triggerValue && canbuild(PowerStation) == false && canbuild(PowerCaptor) == false && energyCell.category == PowerCell) //can't do canbuild(list), it expects a int value (not list) or category name
+	{
+		message("CollectTitanium4() - " + this.category + " " + this.id + " " + " - Power Station/Captor not accesible in this mission.", DisplayWarning);
+	}
+	
+	//integrity check
+	int repairList[];
+	
+	repairList[0] = RepairCenter;
+	repairList[1] = Shielder;
+	
+	repair = radar(repairList);
+	
+	if(repair != null && shieldLevel < 0.5)
+	{
+		message("CollectRawResources() - " + this.category + " " + this.id + " " + " - Structural integritty low, going to Repair Center", DisplayInfo);
+		trygoto(repair.position, crashMode, verboseMode);
+		while(shieldLevel < 1)
+		{
+			wait(1);
+		}
+	}
+	else if (shieldLevel < 0.5 && repair == null)
+	{
+		message("CollectRawResources() - " + this.category + " " + this.id + " " + " - Power Station/Captor not found.", DisplayError);
+	}
+	else if (shieldLevel < 0.5 && canbuild(RepairCenter) == false && repair == null)
+	{
+		message("CollectRawResources() - " + this.category + " " + this.id + " " + " - Power Station/Captor not accesible in this mission.", DisplayWarning);
+	}
+	
+	errmode(1);
+}
+bool object::NuclearCellCheck(object cell) // ensures the bot won't pick a PowerCell when having a NuclearCell inside just because the power meter is higher on the former
+{
+	
+	if (this.energyCell.category == PowerCell)
+	{
+		return true;
+	}
+	
+	float cellPower = cell.energyLevel;
+	float botBatteryPower = this.energyCell.energyLevel;
+	int botBatteryCategory = this.energyCell.category;
+	
+	//message("Power level of the bot: " + botBatteryPower + " and power level of the found cell: " + cellPower);
+	if (cellPower > botBatteryPower && (botBatteryCategory == NuclearCell && botBatteryPower < 0.01))
+	{
+		return false;
+	}
+	return false;
+}
+/*
+crashModes:
+-1,   // default mode
+0,    // stops if collision
+1,    // right-left
+2,    // left-right
+3,    // left
+4,    // right
+5,    // algorithm "sunlight"
+*/
+void object::trygoto(point pos, int crashMode, bool verboseMode)
+{
+	errmode(0);
+	int tries = 0;
+	while (distance(position, pos) > 0) //While we are moving towards destination...
+	{
+		temperatureGuard(); // we're checking if the flying bot's engine is overheating
+		CollisionPrevention(verboseMode, crashMode);
+		
+		while (goto(pos,0,0,crashMode) != 0) //How we are handling goto() errors
+		{
+			CollisionPrevention(verboseMode, crashMode); // self-explaining
+			if(tries > 2)
+			{
+				point midPoint;
+				midPoint.x = ((position.x + pos.x) / 2);
+				midPoint.y = ((position.y + pos.y) / 2);
+				midPoint.z = ((position.z + pos.z) / 2);
+				
+				goto(midPoint);
+				wait(1);
+				goto(pos, 0, 1, crashMode);
+				break;
+			}
+			else wait(2);
+			tries++;
+		}
+		errmode(1);
+		break;
+	}
+}
+void object::CollisionPrevention(bool verboseMode, int crashMode)
+{
+	int blockObjects[5];
+	blockObjects[0] = WheeledGrabber;
+	blockObjects[1] = TrackedGrabber;
+	blockObjects[2] = WingedGrabber;
+	blockObjects[3] = LeggedGrabber;
+	blockObjects[4] = Titanium;
+	
+	if(radar(blockObjects,0,45,0,5) != null) //if there is a object on the ground that would block the bot's patch
+	{
+		object blockObject = radar(blockObjects,0,45,0,10);
+		float angle = objdirection(blockObject,position);
+		
+		move(-1); // could be risky if there is something behind the bot, maybe change it once the function starts working as intended
+		if(angle < 0)
+		{
+			if (verboseMode == true)
+			{
+				message("DEBUG - Risk of collision, angle of the object in front of this bot: " + angle + "turning right");
+			}
+			turn(-90);
+			trygoto(space(blockObject.position), crashMode, verboseMode);
+		}
+		else if(angle > 0)
+		{
+			if (verboseMode == true)
+			{
+				message("DEBUG - Risk of collision, angle of the object in front of this bot: " + angle + "turning left");
+			}
+			turn(90);
+			trygoto(space(blockObject.position), crashMode, verboseMode);
+		}
+		else
+		{
+			if (verboseMode == true)
+			{
+				message("DEBUG - Risk of collision, object dirrectly ahead");
+			}
+			point midPoint;
+			midPoint.x = ((position.x + blockObject.position.x) / 2);
+			midPoint.y = ((position.y + blockObject.position.y) / 2);
+			midPoint.z = ((position.z + blockObject.position.z) / 2);
+			trygoto(space(midPoint), crashMode, verboseMode);
+		}
+	}
+}
+//the four functions below are supplied by melex750, thanks :3
+float object::objdirection(object obj, point pnt)
+{
+	return pointdirection(obj.position, obj.orientation, pnt);
+}
+float object::pointdirection(point center, float ori, point pnt)
+{
+	pnt = pntrotz(pnt, center, -(ori+90));
+	pnt = subpoint(center,pnt);
+	return -atan2(pnt.x,pnt.y);
+}
+point object::pntrotz(point pos, point center, float angle)
+{// rotates pos around center on z axis
+	if(angle==0){return pos;}
+	point a,e;
+	e=subpoint(center,pos);
+	
+	a.x = -(e.x*cos(angle)-e.y*sin(angle));
+	a.y = -(e.x*sin(angle)+e.y*cos(angle));
+	a.z=e.z;
+	
+	return addpoint(center,a);
+}
+point object::addpoint(point pos, point pnt)
+{
+	point apoint;
+	apoint.x=pos.x+pnt.x;apoint.y=pos.y+pnt.y;apoint.z=pos.z+pnt.z;
+	return apoint;
+}
+point object::subpoint(point pos, point pnt)
+{
+	point apoint;
+	apoint.x=pos.x-pnt.x;apoint.y=pos.y-pnt.y;apoint.z=pos.z-pnt.z;
+	return apoint;
+}
+void object::temperatureGuard()        //land if temperature is to high
+{
+	point loc;
+	int counter;
+	
+	if(temperature > 0.6)
+	{
+		jet(0);
+		
+		while(topo(position) < 0)         //find somewhere to land
+		{
+			//message("Debug - temperatureGuard() active");
+			counter = 0;
+			while(counter < 36)        //part made by sclover@abac.com
+			{
+				loc.x = (cos(orientation) * 20.0) + position.x;
+				loc.y = (sin(orientation) * 20.0) + position.y;
+				loc.z = position.z + 5.0;
+				
+				if(topo(loc) >= -0.7)
+				{
+					move(20);
+					break;
+				}
+				turn(10);
+				counter++;
+			}
+			
+			if(topo(position) >= 0)
+			{
+				break;
+			}
+			motor(1, 1);
+			wait(2);
+		}
+		
+		motor(0, 0);        //stop and land
+		jet( -1 );
+		
+	}
+}
+void object::ClawCheck(bool cooperativeMode, float triggerValue, int crashMode, int resourceToCollect, bool verboseMode) //checks what the grabber is holding and acts acordingly
+{
+	if (load == null) //If claw is empty, go to the titanium ore and grab it.
+	{
+		trygoto(OreCheck(cooperativeMode, resourceToCollect, verboseMode),crashMode, verboseMode);
+		errmode(0);
+		if(grab() != 0 or load == null) // If grabber failed to get the ore due to it no longer being there
+		{
+			while(load == null && energyCell.energyLevel <= triggerValue) // making sure we dont run out of power searching for ore
+			{
+				trygoto(OreCheck(cooperativeMode, resourceToCollect, verboseMode), crashMode, verboseMode);
+				grab();
+			}
+		}
+		else if(load != null && load.category != resourceToCollect)
+		{
+			trygoto(space(), crashMode, verboseMode);
+			drop();
+			trygoto(OreCheck(cooperativeMode, resourceToCollect, verboseMode), crashMode, verboseMode);
+			grab();
+		}
+		errmode(1);
+	}
+	else // If anything else is held, drops it and goes to retrieve titanium ore
+	{
+		trygoto(space(), crashMode, verboseMode);
+		drop();
+		trygoto(OreCheck(cooperativeMode, resourceToCollect, verboseMode), crashMode, verboseMode);
+		errmode(0);
+		if(grab() != 0 or load == null) // If grabber failed to get the ore due to it no longer being there
+		{
+			while(load == null && energyCell.energyLevel <= triggerValue) // making sure we dont run out of power searching for ore
+			{
+				trygoto(OreCheck(cooperativeMode, resourceToCollect, verboseMode), crashMode, verboseMode);
+				grab();
+			}
+		}
+		errmode(1);
+	}
+}
+point object::OreCheck(bool cooperativeMode, int resourceToCollect, bool verboseMode) // Checks if a piece of Titanium ore is accessibe and safe for the bot to grab
+{
+	errmode(0);
+	
+	object[] oreList = radarall(resourceToCollect);
+	object ore = radar(resourceToCollect);
+	
+	for(int i = 0; i == sizeof(oreList); i++)
+	{
+		if(OreCondition1(oreList[i], resourceToCollect) == true && OreCondition2(oreList[i], resourceToCollect, verboseMode) == true && OreCondition3(oreList[i]) == true && OreCheckSubber(oreList[i], resourceToCollect) == true) // coalesing all the checks here so we can be sure that all of them are applied when looking for the ore
+		{
+			if (verboseMode == true)
+			{
+				message("DEBUG - found a accessible piece of ore.");
+			}
+			
+			return oreList[i].position;
+		}
+		else if(OreCondition1(oreList[i], resourceToCollect) == true && AyyCheck(oreList[i].position, verboseMode) == new point(9999,9999,999) && OreCondition3(oreList[i]) == true && OreCheckSubber(oreList[i], resourceToCollect) == true) // as above but no aliens are present
+		{
+			if (verboseMode == true)
+			{
+				message("DEBUG - found a accessible piece of ore - no hostiles on map.");
+			}
+			
+			return oreList[i].position;
+		}
+		else
+		{
+			message("CollectRawResources() - " + this.category + " " + this.id + " " + " - Ore detection error, choosing the closest one. Be mindfull of the bot!", DisplayWarning);
+			break;
+		}
+	}
+	errmode(1);
+	return ore.position; //possibly unsafe, at least one of the checks failed
+}
+bool object::OreCondition1(object ore, int resourceToCollect) //checking if ore is underwater and the preogram is running on a subber
+{
+	if (ore != null && topo(ore.position) < 0 && this.category != Subber)
+	{
+		object newOre[] = radarall(resourceToCollect);
+		for(int i = 0; i < sizeof(newOre); ++i)
+		{
+			if (topo(newOre[i].position) >= 0)
+			{
+				ore = newOre[i];
+				return true;
+			}
+		}
+	}
+	else if(ore != null && this.category == Subber)
+	{
+		return true;
+	}
+	return false;
+}
+bool object::OreCondition2(object ore, int resourceToCollect, bool verboseMode) //chekcing if ore is too close to the hostiles
+{
+	if(distance(ore.position, AyyCheck(ore.position, verboseMode)) < 40)
+	{
+		object newOre[] = radarall(resourceToCollect);
+		for(int i = 0; i < sizeof(newOre); ++i)
+		{
+			if (distance(ore.position, AyyCheck(ore.position, verboseMode)) > 40)
+			{
+				ore = newOre[i];
+				return true;
+			}
+		}
+		return true;
+	}
+	else if (AyyCheck(ore.position, verboseMode) == new point (9999,9999,999))
+	{
+		return true;
+	}
+	return false;
+}
+bool object::OreCondition3(object ore) //checking if ore is on a slope and if a given bot can reach it
+{
+	float pz,p2x,p2y;
+	pz = topo(ore.position);
+	p2x = 0.1 * (pz - topo(ore.position.x + 0.1, ore.position.y));
+	p2y = 0.1 * (pz - topo(ore.position.x, ore.position.y + 0.1));
+	float[] retval;
+	retval[0] = atan2(sqrt(p2x * p2x + p2y * p2y), 0.1 * 0.1); // slope
+	retval[1] = atan2(p2y, p2x); // orientation of slope
+	retval[2] = pz;
+	
+	message("Slope height: " + retval[0]);
+	if(retval[0] > 20 && this.category == WingedGrabber)
+	{
+		message("DEBUG - Ore is on a high slope, WingedGrabber may fail to retreive it.", DisplayWarning);
+		return false;
+	}
+	else if(retval[0] > 40 && this.category == WheeledGrabber)
+	{
+		message("DEBUG - Ore is on a high slope, WheeledGrabber may fail to retreive it.", DisplayWarning);
+		return false;
+	}
+	return true;
+}
+bool object::OreCheckSubber(object ore, int resourceToCollect) //a special check for Subber bots, making sure it won't grab the same piece of UraniumOre ad infinitum
+{
+	if (this.category != Subber)
+	{
+		//message("DEBUG - the bot is not a subber");
+		return true;
+	}
+	object plant = search(NuclearPlant, ore.position,0,15);
+	if (distance(plant.position, ore.position) < 15)
+	{
+		message("DEBUG - ore too close to NuclearPlant, looking for a different one.", DisplayWarning);
+		object newOre[] = radarall(resourceToCollect);
+		for(int i = 0; i < sizeof(newOre); ++i)
+		{
+			//plant = search(NuclearPlant, newOre[i].position,0,15);
+			if (distance(plant.position, newOre[i].position) > 15)
+			{
+				ore = newOre[i];
+				return true;
+			}
+		}
+	}
+	return false;
+}
+point object::DerrickCheck(int resourceToCollect) // grabber can go to a derrick that drills the wrong ore if it's the closest,wasting time and breaking the program. This should fix it.
+{
+	object[] derrickList = radarall(Derrick);
+	
+	if (sizeof(derrickList) != 0)
+	{
+		for(int i = 0;i <= sizeof(derrickList);i++)
+		{
+			if (i == sizeof(derrickList))
+			{
+				return derrickList[0].position;
+			}
+			
+			object derrickOre = search(resourceToCollect,derrickList[i].position,0,2);
+			if(derrickOre != null)
+			{
+				point drillFront;
+				
+				drillFront.x = derrickList[i].position.x + 5 * cos(derrickList[i].orientation);
+				drillFront.y = derrickList[i].position.y + 5 * sin(derrickList[i].orientation);
+				
+				return drillFront; //we're not returning an exact derrick position but rather a point in front of it, preventing the bot from getting stuck in derrick's frame under some circumstances (for instance, derrick not facing the converter)
+			}
+		}
+	}
+	
+	return new point(9999,9999,999);
+}
+void object::ConverterHandler(bool cooperativeMode, bool goToGoal, int crashMode, int resourceToCollect, bool verboseMode)
+{
+	object cube;
+	int converterCategory;
+	object ship = radar(SpaceShip);
+	
+	int grabbers[4];
+	grabbers[0] = WheeledGrabber;
+	grabbers[1] = TrackedGrabber;
+	grabbers[2] = WingedGrabber;
+	grabbers[3] = LeggedGrabber;
+	
+	if(resourceToCollect == TitaniumOre)
+	{
+		converterCategory = Converter;
+	}
+	else
+	{
+		converterCategory = NuclearPlant;
+	}
+	
+	while(radar(converterCategory) == null)
+	{
+		message("Waiting until " + converterCategory + " is constructed.");
+		wait(20);
+	}
+	
+	object converter = GetDestination(converterCategory);
+	//converter.position.x = converter.position.x + 5 * cos(converter.orientation);
+	//converter.position.y = converter.position.x + 5 * cos(converter.orientation);
+	
+	message("CollectRawResources() - " + this.category + " " + this.id + " - Ore obtained, going to the " + converter.category);
+	
+	if (converter.category == NuclearPlant && this.category == Subber)
+	{
+		message("CollectRawResources() - " + this.category + " " + this.id + " - Placing Uranium ore in " + converter.category + "'s vicinity, Subber cannot operate it. Have a different grabber type at the ready.", DisplayWarning);
+		trygoto(space(converter.position), crashMode, verboseMode);
+		drop();
+		return;
+	}
+	/*if (resourceToCollect == UraniumOre && category == WingedGrabber) //this is here because on some occasions, when flying grabber lands to prevent engine overheating it can hit the NuclearPlant
+	{
+		trygoto(space(converter.position), crashMode, verboseMode);
+	}*/
+	trygoto(converter.position, crashMode, verboseMode);
+	
+	object grabber = radar(grabbers);
+	
+	ConverterCheck(cooperativeMode,converter);
+	while(search(Titanium,converter.position,0,3) != null or (grabber != null && distance(grabber.position, converter.position) < 6))
+	{
+		wait(1); //waits for another grabber to take the freshly made titanium cube and move away
+	}
+	if(resourceToCollect == TitaniumOre and search(resourceToCollect,converter.position,0,3) != null and distance(grabber.position, converter.position) > 6) //if cube is occupying the converter and no one is around to take it
+	{
+		ConverterSubCheck(converter, resourceToCollect, crashMode, verboseMode, cooperativeMode); 
+	}
+	else if (resourceToCollect == UraniumOre and converter.energyCell != null and distance(grabber.position, converter.position) > 6) //if cube is occupying the nuclear plant and no one is around to take it
+	{
+		ConverterSubCheck(converter, resourceToCollect, crashMode, verboseMode, cooperativeMode);
+	}
+	else
+	{
+		if(cooperativeMode == true)
+		{
+			message("CollectRawResources() - " + this.category + " " + this.id + " - Situation normal. Converting the ore.");
+		}
+		trygoto(converter.position, crashMode, verboseMode);
+	}
+	drop();
+	move(-3);
+	wait(2);
+	while(isbusy(converter))
+	{
+		wait(1);
+	}
+	grab();
+	if(radar(GoalArea) != null && goToGoal == true)
+	{
+		object[] goalList = radarall(GoalArea);
+		for(int i = 0;i <= sizeof(goalList);i++)
+		{
+			if(i == sizeof(goalList))
+			{
+				break;
+			}
+			if(search(Titanium,goalList[i].position,0,2) == null)
+			{
+				trygoto(goalList[i].position, crashMode, verboseMode);
+				break;
+			}
+		}
+	}
+	else
+	{
+		errmode(0);
+		if(goto(space(converter.position)) != 0 && cooperativeMode == true)
+		{
+			message("CollectRawResources() - "  + this.category + " " + this.id + " " + " - Search for free space around" + converter.category + " failed, looking for space around the bot.", DisplayWarning);
+			trygoto(space(), crashMode, verboseMode);
+		}
+		errmode(1);
+	}
+	errmode(0);
+	if(drop() != 0)
+	{
+		while(load != null)
+		{
+			trygoto(space(), crashMode, verboseMode);
+			drop();
+		}
+	}
+	errmode(1);
+}
+object object::GetDestination(int converterObject) // function to direct the grabber towards the nearest idle Converter/NuclearPlant
+{
+	object[] converterList = radarall(converterObject);
+	int grabbers[4];
+	grabbers[0] = WheeledGrabber;
+	grabbers[1] = TrackedGrabber;
+	grabbers[2] = WingedGrabber;
+	grabbers[3] = LeggedGrabber;
+	object grabber = radar(grabbers);
+	
+	for(int i = 0;i <= sizeof(converterList);i++)
+	{
+		if (i == sizeof(converterList))
+		{
+			message("CollectRawResources() - "  + this.category + " " + this.id + " - Error while looking for a vaccant "  + converterList[i].category + ". Going to the closest one.", DisplayWarning);
+			break;
+		}
+		if (isbusy(converterList[i]) == false and (search(TitaniumOre,converterList[i].position,0,3) == null or search(Titanium,converterList[i].position,0,3) == null or distance(converterList[i].position, grabber.position) > 5)) //Converter
+		{
+			return converterList[i];
+		}
+		else if (isbusy(converterList[i]) == false and (converterList[i].energyCell != null and converterList[i].energyCell == null) or distance(converterList[i].position, grabber.position) > 5) //NuclearPlant
+		{
+			return converterList[i];
+		}
+		//return converterList[i];
+	}
+	return converterList[0];
+}
+void object::ConverterCheck(bool cooperativeMode, object converter) //checks if the converter selected by GetDestination() is busy and waits until it isn't
+{
+	if(cooperativeMode == true)
+	{
+		message("CollectRawResources() - "  + this.category + " " + this.id + " " + " - Reached the whereabouts of the" + converter.category + ", checking situation.");
+	}
+	while(isbusy(converter) == true)
+	{
+		wait(1); //waits for the converter to process a titanium ore brought there by someone else
+	}
+	if(cooperativeMode == true)
+	{
+		message("CollectRawResources() - "  + this.category + " " + this.id + " - Converter idle.");
+		wait(1);
+	}
+}
+void object::ConverterSubCheck(object converter, int resourceToCollect, int crashMode, bool verboseMode, bool cooperativeMode) //handles cases when there is something in the Converter platform or NuclearPlant spot
+{
+	message(converter.category + " is not empty, correcting.", DisplayWarning);
+	trygoto(space(converter.position), crashMode, verboseMode);
+	drop();
+	object oreInFront = radar(resourceToCollect, 0, 45, 0, 5);
+	trygoto(converter.position, crashMode, verboseMode);
+	if(grab() != 0) //that cube was already moved, probably by the bot that was using the converter earlier
+	{
+		trygoto(oreInFront.position, crashMode, verboseMode);
+		grab();
+		ConverterCheck(cooperativeMode, converter);
+		trygoto(converter.position, crashMode, verboseMode);
+	}
+	else
+	{
+		trygoto(space(converter.position), crashMode, verboseMode);
+		if(drop() != 0)
+		{
+			while(load != null)
+			{
+				errmode(0);
+				trygoto(space(), crashMode, verboseMode);
+				drop();
+				errmode(1);
+			}
+		}
+		trygoto(oreInFront.position, crashMode, verboseMode);
+		grab();
+		ConverterCheck(cooperativeMode, converter);
+		trygoto(converter.position, crashMode, verboseMode);
+	}
+}
+point object::AyyCheck(point pos, bool verboseMode)
+{
+	int[] alienList;
+	alienList[0] = AlienWasp;
+	alienList[1] = AlienAnt;
+	alienList[2] = AlienSpider;
+	alienList[3] = AlienWorm;
+	alienList[4] = AlienEgg;
+	alienList[5] = AlienQueen;
+	alienList[6] = GreenMushroom; //we count it as it is hostile
+	
+	object alien;
+	
+	for(int i = 0;i <= 6;i++)
+	{
+		alien = search(alienList[i],pos);
+		if(i == 6)
+		{
+			return new point(9999,9999,999);
+		}
+		if(alien != null)
+		{
+			return alien.position;
+		}
+	}
+	return new point(9999,9999,999);
+}
+void object::LightningCheck(int crashMode, bool verboseMode) //Checking if we are on a map with lightning storms
+{
+	object rod = radar(PowerCaptor);
+	
+	if (canbuild(PowerStation) == false && rod != null)
+	{
+		point safeArea = space(rod.position, 3, 40);
+		while(distance(position, safeArea) < 40)
+		{
+			CollectRawResources();
+			if (distance(position, safeArea) > 40)
+			{
+				message("Out of protective range, returning!", DisplayWarning);
+				goto(safeArea);
+				break;
+			}
+		}
+	}
+}
