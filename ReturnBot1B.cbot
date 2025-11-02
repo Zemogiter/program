@@ -1,0 +1,10 @@
+extern void object::ReturnBot1B() //A compoanion code for ReturnBot 1, run it on a Builder bot once cube has been placed
+{
+	object ship;
+	ship = radar(SpaceShip);
+	goto(ship.position);
+	point cube (receive("cubeInFrontX"), receive("cubeInFrontY"), receive("cubeInFrontZ"));
+	goto(cube);
+	build(BotFactory);
+	goto(ship.position);
+}
