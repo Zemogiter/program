@@ -1,250 +1,130 @@
-extern void object::ReturnBot1() //a Bot Factory management program
+extern void object::RetunBot1() //a simple program that prepares the cubes for mission 1-2
 {
-	int botToBuild = TrackedSniffer; // change accordingly
-	bool riskTaking = false; //change to true if you want the grabber to make a Nuclear Cell for the newly constructed bot
-	bool ignoreShip = false;
+	object cube, post, cubeInFront, cell, ship;
 	
-	object botFactory = radar(BotFactory);
-	object cube = radar(Titanium);
-	object ship = radar(SpaceShip);
-	
-	int list[], i;
-	i = 0;
-	list[i++] = WingedGrabber;
-	list[i++] = TrackedGrabber;
-	list[i++] = WheeledGrabber;
-	list[i++] = LeggedGrabber;
-	list[i++] = WingedBuilder;
-	list[i++] = TrackedBuilder;
-	list[i++] = WheeledBuilder;
-	list[i++] = LeggedBuilder;
-	list[i++] = PracticeBot;
-	list[i++] = TargetBot;
-	list[i++] = WingedShooter;
-	list[i++] = TrackedShooter;
-	list[i++] = WheeledShooter;
-	list[i++] = LeggedShooter;
-	list[i++] = WingedOrgaShooter;
-	list[i++] = TrackedOrgaShooter;
-	list[i++] = WheeledOrgaShooter;
-	list[i++] = LeggedOrgaShooter;
-	list[i++] = WingedSniffer;
-	list[i++] = TrackedSniffer;
-	list[i++] = WheeledSniffer;
-	list[i++] = LeggedSniffer;
-	list[i++] = Thumper;
-	list[i++] = PhazerShooter;
-	list[i++] = Recycler;
-	list[i++] = Shielder;
-	list[i++] = Subber;
-	
-	if (botFactory != null and isbusy(botFactory)) //first we check if BotFactory is already busy
+	if (load == null)
 	{
-		message("Closest BotFactory already at work, going to grab the power source/move the battery in claw to BotFactory.");
-		PowerHandler(riskTaking);
-		trygoto(GetFactoryFront(botFactory));
-		turn(direction(botFactory.position));
-		while(isbusy(botFactory))
+		cube = radar(Titanium);
+		goto(cube.position);
+		grab();
+		goto(flatspace(position,5));
+		drop();
+		cubeInFront = radar(Titanium,0,90,0,4);
+	}
+	else if (load != null && load.category == Titanium && radar(BotFactory) == null)
+	{
+		goto(flatspace(position,5));
+		drop();
+		cubeInFront = radar(Titanium,0,90,0,4);
+	}
+	
+	if (sizeof(radarall(BotFactory)) == 1)
+	{
+		
+		ship = radar(SpaceShip);
+		message("Construction materials placed (" + cubeInFront.position + ") now sending coordinates for it to ExchangePost");
+		goto(ship.position);
+		send("cubeInFrontX",cubeInFront.position.x);
+		send("cubeInFrontY",cubeInFront.position.y);
+		send("cubeInFrontZ",cubeInFront.position.z);
+		message("Waiting until BotFactory is constructed, activate the other script on builder bot.");
+		while (sizeof(radarall(BotFactory)) == 1)
 		{
 			wait(1);
 		}
-		drop();
-		GetOutOfTheWay(ship,botFactory,ignoreShip);
+		//message("Operational BotFactory detected, creating the second WheeledGrabber.");
 	}
-	else if(search(list,botFactory.position,0,4) != null) //then we check if there is a newly made bot in need of a battery
+	message("Operational BotFactory detected, creating the second WheeledGrabber.");
+	if (load != null && load.category == Titanium)
 	{
-		message("A newly made bot awaits a power source, moving.");
-		PowerHandler(riskTaking);
-		trygoto(GetFactoryFront(botFactory));
-		turn(direction(botFactory.position));
-		drop();
-		GetOutOfTheWay(ship,botFactory,ignoreShip);
-	}
-	else if (botFactory != null and search(Titanium,botFactory.position,0,4) != null) //if there is a cube in the BotFactory
-	{
-		message("Cube in the building, sending signal to construct " + botToBuild + " and going to get the power source.");
-		factory(botToBuild);
-		PowerHandler(riskTaking);
-		trygoto(GetFactoryFront(botFactory));
-		turn(direction(botFactory.position));
-		while(isbusy(botFactory))
-		{
-			wait(1);
-		}
-		drop();
-		GetOutOfTheWay(ship,botFactory,ignoreShip);
-	}
-	else if (botFactory != null and search(Titanium,botFactory.position,0,5) == null) //if there is no cube in the BotFactory
-	{
-		message("No cube in the building, moving there.");
-		if(load == null)
-		{
-			trygoto(cube.position);
-			grab();
-			wait(1);
-			if(load != null and load.category != Titanium) //if grabber has a incorrect item
-			{
-				message("Grabber picked up the wrong item, correcting.");
-				goto(space());
-				drop();
-				trygoto(cube.position);
-				grab();
-			}
-		}
-		else if (load != null and load.category != Titanium)
+		object fabrika = radar(BotFactory,0,360,1,1000,-1);
+		
+		if (search(Titanium,fabrika.position,0,3) != null) //there is already a titanum cube in BotFactory)
 		{
 			goto(space());
 			drop();
-			trygoto(cube.position);
-			grab();
 		}
-		goto(botFactory.position);
-		drop();
-		move(-3);
-		factory(botToBuild);
-		PowerHandler(riskTaking);
-		trygoto(GetFactoryFront(botFactory));
-		turn(direction(botFactory.position));
-		while(isbusy(botFactory))
+		goto(fabrika.position);
+		if (load != null)
+		{
+			drop();
+		}
+		
+		move(-2);
+		factory(WheeledGrabber);
+		
+		object[] cellList = radarall(PowerCell);
+		
+		for (int i = 0; i == sizeof(cellList); i++)
+		{
+			if (cellList[i].energyLevel == 1)
+			{
+				cell = cellList[i];
+			}
+		}
+		goto(cell.position);
+		grab();
+		
+		float angle = fabrika.orientation;
+		float radius = 5;
+		point factoryFront (fabrika.position.x + radius * cos(angle), fabrika.position.y + radius * sin(angle));
+		
+		goto(factoryFront);
+		while(isbusy(fabrika) == true)
 		{
 			wait(1);
 		}
 		drop();
-		GetOutOfTheWay(ship,botFactory,ignoreShip);
-	}
-	else if (botFactory == null) //waits for BotFactory to be constructed
-	{
-		while(radar(BotFactory) == null)
-		{
-			message("No BotFactory found, waiting.");
-			wait(20);
-		}
-	}
-}
-void object::PowerHandler(bool riskTaking)
-{
-	object make, power, cube;
-	object recharge = radar(PowerStation);
-	int i = 0;
-	int[] powerList;
-	powerList[i++] = PowerCell;
-	powerList[i++] = NuclearCell;
-	power = radar(powerList);
-	
-	if (load != null && (load.category == PowerCell or load.category == NuclearCell))
-	{
-		return;
-	}
-	if (power != null && power.category == PowerCell && power.energyLevel < 1 && recharge != null) //closest Power Cell needs to be charged
-	{
-		goto(power.position);
-		grab();
-		if(load.category == PowerCell && load.energyLevel < 1 && recharge != null)
-		{
-			goto(recharge.position);
-			while(load.energyLevel < 1)
-			{
-				wait(1);
-			}
-		}
-	}
-	else if(power == null) //no cell found
-	{
-		message("No PowerCell/NuclearCell found, moving to make one.");
-		if (riskTaking == true)
-		{
-			object uran = radar(UraniumOre);
-			object atomic = radar(NuclearPlant);
-			trygoto(uran.position);
-			grab();
-			trygoto(atomic.position);
-			drop();
-			move(-3);
-			while(isbusy(atomic))
-			{
-				wait(1);
-			}
-			move(2);
-			grab();
-		}
-		else
-		{
-			while(radar(Titanium) == null)
-			{
-				message("No cube to process into PowerCell, waiting");
-				wait(20);
-			}
-			cube = radar(Titanium);
-			goto(cube.position);
-			grab();
-			make = radar(PowerPlant);
-			while(make == null)
-			{
-				message("No PowerPlant found, waiting");
-				wait(20);
-			}
-			goto(make.position);
-			drop();
-			wait(2);
-			while(isbusy(make))
-			{
-				wait(1);
-			}
-			grab();
-		}
+		goto(ship.position);
+		message("Grabber finished the assignment!");
 	}
 	else
 	{
-		trygoto(power.position);
+		cube = radar(Titanium);
+		goto(cube.position);
 		grab();
-	}
-}
-void object::trygoto(point pos)
-{
-	errmode(0);
-	int tries = 0;
-	while (distance(position, pos) > 0) //While we are moving towards destination...
-	{
-		while (goto(pos) != 0) //How we are handling goto() errors
+		
+		object fabrika = radar(BotFactory,0,360,1,1000,-1);
+		
+		if (search(Titanium,fabrika.position,0,3) != null) //there is already a titanum cube in BotFactory)
 		{
-			if(tries > 2)
-			{
-				point midPoint;
-				midPoint.x = ((position.x + pos.x) / 2);
-				midPoint.y = ((position.y + pos.y) / 2);
-				midPoint.z = ((position.z + pos.z) / 2);
-				goto(midPoint);
-				wait(1);
-				goto(pos, 0, 1);
-				break;
-			}
-			else wait(2);
-			tries++;
+			goto(space());
+			drop();
 		}
-		errmode(1);
-		break;
+		goto(fabrika.position);
+		if (load != null)
+		{
+			drop();
+		}
+		goto(fabrika.position);
+		drop();
+		move(-2);
+		factory(WheeledGrabber);
+		
+		object[] cellList = radarall(PowerCell);
+		
+		for (int i = 0; i == sizeof(cellList); i++)
+		{
+			if (cellList[i].energyLevel == 1)
+			{
+				cell = cellList[i];
+			}
+		}
+		goto(cell.position);
+		grab();
+		
+		float angle = fabrika.orientation;
+		float radius = 5;
+		point factoryFront (fabrika.position.x + radius * cos(angle), fabrika.position.y + radius * sin(angle));
+		
+		goto(factoryFront);
+		while(isbusy(fabrika) == true)
+		{
+			wait(1);
+		}
+		drop();
+		goto(ship.position);
+		message("Grabber finished the assignment!");
 	}
-}
-point object::GetFactoryFront(object botFactory) // returns a point in front of the BotFactory, grabber goes there instead of the building itself, preventing issues with constantly bumping into it (or the bot inside it) or clipping trough the building's gate since it's not a solid object, huge thanks to tomaszkax86 for providing a solution 
-{
-	float angle = botFactory.orientation;
-	float radius = 5;
-	point factoryFront;
-	factoryFront.x = botFactory.position.x + radius * cos(angle);
-	factoryFront.y = botFactory.position.y + radius * sin(angle);
 	
-	//produce(factoryFront,botFactory.orientation,WayPoint);
-	
-	return factoryFront;
-}
-void object::GetOutOfTheWay(object ship, object botFactory, bool ignoreShip)
-{
-	if (ship != null and ignoreShip == false)
-	{
-		goto(space(ship.position,0,10));
-	}
-	else
-	{
-		goto(space(botFactory.position));
-	}
 }
