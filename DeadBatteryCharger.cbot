@@ -87,7 +87,7 @@ void object::DeliverPowerCell(int deliveryMode, point botOrgPosition, object sta
 		trygoto(botOrgPosition);
 		goto(space());
 		drop();
-		message("PowerCell charged and delivered to " + botOrgPosition, DisplayInfo);
+		message("PowerCell charged and delivered back to bot's original position: " + botOrgPosition, DisplayInfo);
 	}
 	else if(deliveryMode == 1) //leave near the PowerStation/PowerCaptor
 	{
@@ -100,9 +100,9 @@ void object::DeliverPowerCell(int deliveryMode, point botOrgPosition, object sta
 		trygoto(batteryOrgPosition);
 		goto(space());
 		drop();
-		message("PowerCell charged and delivered to " + batteryOrgPosition, DisplayInfo);
+		message("PowerCell charged and delivered to it's original position: " + batteryOrgPosition, DisplayInfo);
 	}
-	else if(deliveryMode == 3) //go to base
+	else if(deliveryMode == 3) //go to base, need to tweak this so that the bot won't put the Power cell on the ship's ramp
 	{
 		if(baseObject.category == SpaceShip)
 		{
