@@ -1,7 +1,9 @@
 extern void object::TowerSupport()
 {
 	bool manufactureCells = false; //set to true if you want the bot to also create new PowerCells if it finds none
-	float triggerLevel = 0.3; //Defense Towers at this power level will be taken care of (if they have PowerCells)
+	float triggerValue = 0.3; //Defense Towers at this power level will be taken care of (if they have PowerCells), also tells the bot to recharge itself
+	bool lookforcells = false;
+	int crashMode = -1; //changes the way bot reacts on colision with another object, may disable path-finding. -1 is the default. Check the list above the trygoto() function to see what options are available
 	
 	object[] towerList = radarall(DefenseTower);
 	int[] powerList;
@@ -15,6 +17,11 @@ extern void object::TowerSupport()
 	{
 		for (int i = 0;i < sizeof(towerList);i++)
 		{
+			while(search(Any,GetTowerFront(towerList[i]),0,3) != null) //if anything is blocking the front of the DEfenseTower
+			{
+				message("Unexpected item in front of the tower, please remove it", DisplayWarning);
+				wait(30);
+			}
 			if(load != null)
 			{
 				drop();
@@ -23,7 +30,7 @@ extern void object::TowerSupport()
 			
 			object facility = radar(powerList);
 			
-			if(towerList[i].energyCell != null && towerList[i].energyCell.energyLevel < triggerLevel) //handling scenarios where DefenseTower has a power source in it
+			if(towerList[i].energyCell != null && towerList[i].energyCell.energyLevel < triggerValue) //handling scenarios where DefenseTower has a power source in it
 			{
 				goto(towerList[i].position);
 				grab();
@@ -39,6 +46,7 @@ extern void object::TowerSupport()
 					goto(towerList[i].position);
 					drop();
 					goto(space());
+					Mainteneance(lookforcells, triggerValue, crashMode);
 				}
 				else if(facility != null && cell != null && distance(position,facility.position) > distance(position,cell.position)) //recharge building exists but power cell is closer
 				{
@@ -58,6 +66,7 @@ extern void object::TowerSupport()
 					goto(towerList[i].position);
 					drop();
 					goto(space());
+					Mainteneance(lookforcells, triggerValue, crashMode);
 				}
 				else if(facility == null && cell != null) //no recharge building, will use power cells on the ground
 				{
@@ -69,6 +78,7 @@ extern void object::TowerSupport()
 					goto(towerList[i].position);
 					drop();
 					goto(space());
+					Mainteneance(true, triggerValue, crashMode);
 				}
 				else if (cell == null && facility != null) //no cells on the ground, will use PowerStation/Captor
 				{
@@ -81,37 +91,47 @@ extern void object::TowerSupport()
 					goto(towerList[i].position);
 					drop();
 					goto(space());
+					Mainteneance(false, triggerValue, crashMode);
 				}
-				else if (cell == null && facility == null) //rare case, user should enable cell production
+				else //rare case, user should enable cell production
 				{
 					message("No way to keep the tower(s) operational, set manufactureCells to true", DisplayError);
 					break;
 				}
 			}
-			else if (towerList[i].energyCell == null) //DefenseTower has no cell on it
+			else if (towerList[i].energyCell == null) //DefenseTower has no cell
 			{
 				object cell = radar(cellList);
-				goto(cell.position);
-				grab();
-				if(load != null and load.energyLevel == 0) //grabber took something that was next to the power cell
+				if (cell == null) //rare case, user should enable cell production
 				{
-					message("Grabber picked up the wrong item, correcting.");
-					    goto(space());
-					    drop();
-					    goto(cell.position);
-					    grab();
+					message("No way to keep the tower(s) operational, set manufactureCells to true", DisplayError);
+					break;
 				}
-				if(facility != null && load.energyLevel < 1 && load.category == PowerCell)
+				else
 				{
-					goto(facility.position);
-					while(load.energyLevel <1)
+					trygoto(cell.position, crashMode);
+					grab();
+					if(load != null and load.energyLevel == 0) //grabber took something that was next to the power cell
 					{
-						wait(1);
+						message("Grabber picked up the wrong item, correcting.");
+						goto(space());
+						drop();
+						goto(cell.position);
+						grab();
 					}
+					if(facility != null && load.energyLevel < 1 && load.category == PowerCell)
+					{
+						goto(facility.position);
+						while(load.energyLevel <1)
+						{
+							wait(1);
+						}
+					}
+					goto(towerList[i].position);
+					drop();
+					goto(space());
+					Mainteneance(lookforcells, triggerValue, crashMode);
 				}
-				goto(towerList[i].position);
-				drop();
-				goto(space());
 			}
 		}
 	}
@@ -137,16 +157,244 @@ void object::CellProduction(int[] cellList, bool manufactureCells)
 		drop();
 	}
 }
-point object::CellCheck(object tower) //currently unused
+void object::Mainteneance(bool lookforcells, float triggerValue, int crashMode)
 {
-	object[] cellsOnMap = radarall(PowerCell);
-	point cell;
-	for(int i = 0;i <= sizeof(cellsOnMap);i++)
+	int list[], i;
+	object power,repair;
+	
+	i = 0;
+	list[i++] = PowerStation;
+	list[i++] = PowerCaptor;
+	
+	errmode(0);
+	
+	power = radar(list);
+	
+	if(power == null && lookforcells == true && this.category != Subber)
 	{
-		if(cellsOnMap[i].energyLevel > load.energyLevel or cellsOnMap[i].energyLevel > tower.energyCell.energyLevel)
+		int cellList[];
+		cellList[0] = PowerCell;
+		cellList[1] = NuclearCell;
+		object cell = radar(cellList);
+		
+		if(cell.energyLevel >= energyCell.energyLevel && cell.energyLevel >= triggerValue)
 		{
-			return cell = cellsOnMap[i].position;
-		} 
+			message("CollectTitanium4() - " + this.category + " " + this.id + " " + "Swapping with better PowerCell/NuclearCell...",DisplayInfo);
+			goto(cell.position);
+			grab();
+			drop(Behind);
+			grab(EnergyCell);
+			drop();
+			grab(Behind);
+			drop(EnergyCell);
+		}
 	}
-	return cell = new point(9999,9999,999);
+	
+	if(power != null && energyCell.energyLevel < triggerValue && energyCell.category != NuclearCell)
+	{
+		message("CollectTitanium4() - " + this.category + " " + this.id + " " + "Battery low, going to recharge facility", DisplayInfo);
+		if(search(Any,power.position,0,3,1,FilterOnlyLanding) != null) //if there is a object (most likey another bot) on the recharge facility
+		{
+			trygoto(space(power.position),crashMode);
+		}
+		trygoto(power.position,crashMode);
+		while(energyCell.energyLevel < 1)
+		{
+			wait(1);
+		}
+	}
+	else if (energyCell.energyLevel < triggerValue && power == null && energyCell.category == PowerCell) //checking if we have power cell so that we wont display this error needlessly
+	{
+		message("Power Station/Captor not found.", DisplayError);
+	}
+	else if (energyCell.energyLevel < triggerValue && canbuild(PowerStation) == false && canbuild(PowerCaptor) == false && energyCell.category == PowerCell) //can't do canbuild(list), it expects a int value (not list) or category name
+	{
+		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+	}
+	
+	repair = radar(RepairCenter);
+	if (repair == null)
+	{
+		repair = radar(Shielder);
+	}
+	
+	if(shieldLevel < 0.5)
+	{
+		message("CollectTitanium4() - " + this.category + " " + this.id + " " + "Structural integritty low, going to Repair Center", DisplayInfo);
+		trygoto(repair.position, crashMode);
+		while(shieldLevel < 1)
+		{
+			wait(1);
+		}
+	}
+	else if (shieldLevel < 0.5 && radar(repair.category) == null)
+	{
+		message("Power Station/Captor not found.", DisplayError);
+	}
+	else if (shieldLevel < 0.5 && canbuild(repair.category) == false)
+	{
+		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+	}
+	
+	errmode(1);
+}
+point object::GetTowerFront(object tower) // returns a point in front of the DefenseTower's battery slot
+{
+	float angle = tower.orientation;
+	float radius = 5;
+	point towerFront;
+	towerFront.x = tower.position.x + radius * cos(angle);
+	towerFront.y = tower.position.y + radius * sin(angle);
+	
+	//produce(factoryFront,botFactory.orientation,WayPoint);
+	
+	return towerFront;
+}
+void object::trygoto(point pos, int crashMode)
+{
+	errmode(0);
+	int tries = 0;
+	while (distance(position, pos) > 0) //While we are moving towards destination...
+	{
+		temperatureGuard(); // we're checking if the flying bot's engine is overheating
+		CollisionPrevention();
+		
+		while (goto(pos,0,0,crashMode) != 0) //How we are handling goto() errors
+		{
+			CollisionPrevention(); // self-explaining
+			if(tries > 2)
+			{
+				point midPoint;
+				midPoint.x = ((position.x + pos.x) / 2);
+				midPoint.y = ((position.y + pos.y) / 2);
+				midPoint.z = ((position.z + pos.z) / 2);
+				
+				goto(midPoint);
+				wait(1);
+				goto(pos, 0, 1, crashMode);
+				break;
+			}
+			else wait(2);
+			tries++;
+		}
+		errmode(1);
+		break;
+	}
+}
+void object::CollisionPrevention()
+{
+	int blockObjects[5];
+	blockObjects[0] = WheeledGrabber;
+	blockObjects[1] = TrackedGrabber;
+	blockObjects[2] = WingedGrabber;
+	blockObjects[3] = LeggedGrabber;
+	blockObjects[4] = Titanium;
+	
+	if(radar(blockObjects,0,45,0,10) != null) //if there is a object on the ground that would block the bot's patch
+	{
+		message("DEBUG - CollisionPrevention() function activated");
+		object blockObject = radar(blockObjects,0,45,0,10);
+		move(-1); // could be risky if there is something behind the bot, maybe change it once the function starts working as intended
+		
+		float angle = objdirection(blockObject,position);
+		message("DEBUG - angle of the object in front of this bot: " + angle);
+		
+		if(angle < 0)
+		{
+			message("DEBUG - turning right");
+			turn(-90);
+			goto(space(blockObject.position));
+		}
+		else if(angle > 0)
+		{
+			message("DEBUG - turning left");
+			turn(90);
+			goto(space(blockObject.position));
+		}
+		else
+		{
+			message("DEBUG - object dirrectly ahead");
+			point midPoint;
+			midPoint.x = ((position.x + blockObject.position.x) / 2);
+			midPoint.y = ((position.y + blockObject.position.y) / 2);
+			midPoint.z = ((position.z + blockObject.position.z) / 2);
+			goto(space(midPoint));
+		}
+	}
+}
+//the four functions below are supplied by melex750, thanks :3
+float object::objdirection(object obj, point pnt)
+{
+	return pointdirection(obj.position, obj.orientation, pnt);
+}
+float object::pointdirection(point center, float ori, point pnt)
+{
+	pnt = pntrotz(pnt, center, -(ori+90));
+	pnt = subpoint(center,pnt);
+	return -atan2(pnt.x,pnt.y);
+}
+point object::pntrotz(point pos, point center, float angle)
+{// rotates pos around center on z axis
+	if(angle==0){return pos;}
+	point a,e;
+	e=subpoint(center,pos);
+	
+	a.x = -(e.x*cos(angle)-e.y*sin(angle));
+	a.y = -(e.x*sin(angle)+e.y*cos(angle));
+	a.z=e.z;
+	
+	return addpoint(center,a);
+}
+point object::addpoint(point pos, point pnt)
+{
+	point apoint;
+	apoint.x=pos.x+pnt.x;apoint.y=pos.y+pnt.y;apoint.z=pos.z+pnt.z;
+	return apoint;
+}
+point object::subpoint(point pos, point pnt)
+{
+	point apoint;
+	apoint.x=pos.x-pnt.x;apoint.y=pos.y-pnt.y;apoint.z=pos.z-pnt.z;
+	return apoint;
+}
+void object::temperatureGuard()        //land if temperature is to high
+{
+	point loc;
+	int counter;
+	
+	if(temperature > 0.7)
+	{
+		jet(0);
+		
+		while(topo(position) < 0)         //find somewhere to land
+		{
+			//message("Debug - temperatureGuard() active");
+			counter = 0;
+			while(counter < 36)        //part made by sclover@abac.com
+			{
+				loc.x = (cos(orientation) * 20.0) + position.x;
+				loc.y = (sin(orientation) * 20.0) + position.y;
+				loc.z = position.z + 5.0;
+				
+				if(topo(loc) >= -0.7)
+				{
+					move(20);
+					break;
+				}
+				turn(10);
+				counter++;
+			}
+			
+			if(topo(position) >= 0)
+			{
+				break;
+			}
+			motor(1, 1);
+			wait(2);
+		}
+		
+		motor(0, 0);        //stop and land
+		jet( -1 );
+		
+	}
 }
