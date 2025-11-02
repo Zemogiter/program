@@ -32,8 +32,8 @@ extern void object::UpgradeToUranium()
 	list[i++] = Recycler;
 	list[i++] = Shielder;
 	list[i++] = Subber;
-	object[] botList = radar(list);
-
+	object[] botList = radarall(list);
+	
 	for(int i = 0;i <= sizeof(botList);i++)
 	{
 		if(upgradeOwnCellFirst == true and sizeof(radarall(NuclearCell)) > sizeof(botList) and energyCell.category != NuclearCell) // picking up a cell for yourself if possible
@@ -50,19 +50,26 @@ extern void object::UpgradeToUranium()
 		if(botList[i].energyCell.category != NuclearCell) //bot has something that is not a NuclearCell
 		{
 			object cell = radar(NuclearCell);
-			goto(cell.position);
-			grab();
-			goto(botList[i].position);
-			turn(90);
-			drop();
-			turn(-90);
-			grab();
-			turn(-90);
-			drop();
-			turn(180);
-			grab();
-			turn(-90);
-			drop();
+			if (cell != null)
+			{
+				goto(cell.position);
+				grab();
+				goto(botList[i].position);
+				turn(90);
+				drop();
+				turn(-90);
+				grab();
+				turn(-90);
+				drop();
+				turn(180);
+				grab();
+				turn(-90);
+				drop();
+			}
+			else
+			{
+				message("No Uranium power cell found", DisplayWarning);
+			}
 		}
 		else if(botList[i].energyCell == null) //no cell
 		{
@@ -71,24 +78,6 @@ extern void object::UpgradeToUranium()
 			grab();
 			goto(botList[i].position);
 			drop();
-		}
-		else if(search(BotFactory,list[i].position,0,4) != null and botList[i].energyCell.category != NuclearCell) //bot in factory
-		{
-			object cell = radar(NuclearCell);
-			goto(cell.position);
-			grab();
-			goto(space(botList[i].position));
-			drop();
-			object cellInFront = radar(NuclearCell,0,45,0,10);
-			goto(botList[i].position);
-			grab();
-			goto(space());
-			drop();
-			goto(cellInFront.position);
-			grab();
-			goto(botList[i].position);
-			drop();
-			goto(space());
 		}
 	}
 }
