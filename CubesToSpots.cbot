@@ -1,6 +1,6 @@
 extern void object::CubesToSpots()
 {
-	float triggerValue = 0.3; // bot will move to recharge batteries/shields once they reach this level
+	float triggerValue = 0.4; // bot will move to recharge batteries/shields once they reach this level
 	
 	int[] spotList;
 	spotList[0] = PowerSpot;
@@ -10,18 +10,15 @@ extern void object::CubesToSpots()
 	spotList[4] = KeyBSpot;
 	spotList[5] = KeyCSpot;
 	spotList[6] = KeyDSpot;
-	if(canbuild(RadarStation) == true) // in user levels, this is usually used to indicate RS should be there to finish the mission
+	if(canbuild(RadarStation) == true) // in user levels, this is usually used to indicate RadioStation should be there to finish the mission
 	{
 		spotList[7] = WayPoint;
 	}
 	object[] spotList2 = radarall(spotList);
 	object[] cubeList = radarall(Titanium);
 	
-	if(load != null && load.category != Titanium)
-	{
-		drop();
-	}
-	else if(load != null && load.category == Titanium)
+	
+	if(load != null && load.category == Titanium)
 	{
 		message("Bot has the cube already, not searching for one.");
 	}
@@ -53,6 +50,14 @@ extern void object::CubesToSpots()
 					 goto(cube.position);
 					 grab();
 				}
+				else if(load != null && load.category != Titanium)
+				{
+					message("Bot has the wrong, correcting.");
+					goto(space(position));
+					drop();
+					goto(cube.position);
+					grab();
+				}
 				errmode(1);
 			}
 			goto(spot.position);
@@ -67,39 +72,20 @@ object object::SelectNextCube(object[] cubeList,object spot)
 {
 	for(int i = 0; i <= sizeof(cubeList); i++)
 	{
-		if(radar(Titanium) == null)
-		{
-			message("No cube found.", DisplayError);
-			break;
-		}
 		if(i == sizeof(cubeList) or spot == null)
 		{
-			message("All cubes are assigned to spots. More cubes required.", DisplayError);
+			message("Not enough cubes for spots or every spot already has a cube.", DisplayError);
 			return null;
 		}
-		// do not uncomment lines in if blocks below unless for debugging purpouses
-		if(spot.category == PowerSpot && (radar(TitaniumSpot) != null && distance(cubeList[i].position, radar(TitaniumSpot).position) < 4) or (radar(UraniumSpot) != null && distance(cubeList[i].position, radar(UraniumSpot).position) < 4 ))
+		if(search(PowerSpot,cubeList[i].position,0,2) != null or search(TitaniumSpot,cubeList[i].position,0,2) != null or search(UraniumSpot,cubeList[i].position,0,2) != null)
 		{
-			/*produce(cubeList[i].position, cubeList[i].orientation, GreenFlag);
-			message("DEBUG - Cube is to be deliverd to PowerSpot but it's already at Titanium or Uranium spot");*/
 			continue;
 		}
-		else if(spot.category == TitaniumSpot && (radar(PowerSpot) != null && distance(cubeList[i].position, radar(PowerSpot).position) < 4) or (radar(UraniumSpot) != null && distance(cubeList[i].position, radar(UraniumSpot).position) < 4 ))
-		{
-			/*produce(cubeList[i].position, cubeList[i].orientation, RedFlag);
-			message("DEBUG - Cube is to be deliverd to Titanium but it's already at Power or Uranium spot");*/
-			continue;
-		}
-		else if(spot.category == UraniumSpot && (radar(TitaniumSpot) != null && distance(cubeList[i].position, radar(TitaniumSpot).position) < 4) or (radar(PowerSpot) != null && distance(cubeList[i].position, radar(PowerSpot).position) < 4 ) )
-		{
-			/*produce(cubeList[i].position, cubeList[i].orientation, YellowFlag);
-			message("DEBUG - Cube is to be deliverd to UraniumSpot but it's already at Titanium or Power spot");*/
-			continue;
-		}
-		if(spot != null and distance(cubeList[i].position,spot.position) > 4 and distance(cubeList[i].position,position) > 4) // if spots exist on map, distance between a spot and cube are big enough and cube isn't already placed at a different spot, it will be our next target
+		else
 		{
 			return cubeList[i];
 		}
+		
 	}
 	return null;
 }
@@ -121,30 +107,96 @@ object object::SelectNextSpot(object[] spotList)
 		{
 			return spotList[i];
 		}
-		else
-		{
-			message("All spots have cubes next to them, or not enough cubes for all the spots on map. Ensure at least " + sizeof(spotList) + " cubes are available.", DisplayWarning);
-			break;
-		}
 	}
 	return null;
 }
 void object::Mainteneance(float triggerValue)
 {
-	int list[], i;
-	object power,repair;
-	
-	i = 0;
-	list[i++] = PowerStation;
-	list[i++] = PowerCaptor;
-	
 	errmode(0);
+	
+	int list[], cellList[];
+	object power, repair, cell;
+	
+	list[0] = PowerStation;
+	list[1] = PowerCaptor;
 	
 	power = radar(list);
 	
+	cellList[0] = PowerCell;
+	cellList[1] = NuclearCell;
+	
+	cell = radar(cellList);
+	
+	//checking for batteries first, in case they're the only way to recharge a bot or they're more accessible
+	if (this.category != Subber)
+	{
+		//no power facility on the map
+		if (power == null) 
+		{
+			if (this.energyCell.energyLevel <= triggerValue && cell.energyLevel >= this.energyCell.energyLevel && cell.energyLevel >= triggerValue && NuclearCellCheck(cell) == true)
+			{
+				if (cell.category == PowerCell)
+				{
+					message("CollectTitanium4() - " + this.category + " " + this.id + " " + " - No recharge facility found - swapping with better PowerCell.");
+				}
+				else if (cell.category == NuclearCell)
+				{
+					message("CollectTitanium4() - " + this.category + " " + this.id + " " + " - No recharge facility found - swapping with better NuclearCell.");
+				}
+				trygoto(cell.position);
+				if (load != null)
+				{
+					turn(90);
+					drop();
+					turn(-90);
+				}
+				grab();
+				drop(Behind);
+				grab(EnergyCell);
+				drop();
+				grab(Behind);
+				drop(EnergyCell);
+			}
+		}
+		//power facility exists but cell is closer
+		else if (power != null && cell != null && distance(position, cell.position) < distance(position, power.position)) 
+		{
+			if (this.energyCell.energyLevel <= triggerValue && cell.energyLevel >= this.energyCell.energyLevel && cell.energyLevel >= triggerValue && NuclearCellCheck(cell) == true)
+			{
+				if (cell.category == PowerCell)
+				{
+					message("CollectTitanium4() - " + this.category + " " + this.id + " " + " - Can't reach power facility or a PowerCell is closer.");
+				}
+				else if (cell.category == NuclearCell)
+				{
+					message("CollectTitanium4() - " + this.category + " " + this.id + " " + " - Can't reach power facility or a NuclearCell is closer.");
+				}
+				trygoto(cell.position);
+				if (load != null)
+				{
+					turn(90);
+					drop();
+					turn(-90);
+				}
+				grab();
+				drop(Behind);
+				grab(EnergyCell);
+				drop();
+				grab(Behind);
+				drop(EnergyCell);
+			}
+		}
+	}
+	
+	//going to recharge facility
 	if(power != null && energyCell.energyLevel < triggerValue && energyCell.category != NuclearCell)
 	{
-		message("Battery low, going to recharge facility", DisplayInfo);
+		message("CollectTitanium4() - " + this.category + " " + this.id + " " + " - Battery low, going to the recharge facility");
+		if(search(Any,power.position,0,2,1,FilterOnlyLanding | FilterFriendly) != null) //if there is a object (most likey another bot) on the recharge facility
+		{
+			message("CollectTitanium4() - " + this.category + " " + this.id + " " + " - Something is close to the recharge facility, going to the nearby location to avoid potential collisions.");
+			trygoto(space(power.position));
+		}
 		trygoto(power.position);
 		while(energyCell.energyLevel < 1)
 		{
@@ -153,34 +205,59 @@ void object::Mainteneance(float triggerValue)
 	}
 	else if (energyCell.energyLevel < triggerValue && power == null && energyCell.category == PowerCell) //checking if we have power cell so that we wont display this error needlessly
 	{
-		message("Power Station/Captor not found.", DisplayError);
+		message("CollectTitanium4() - " + this.category + " " + this.id + " " + " - Power Station/Captor not found.", DisplayError);
 	}
-	else if (energyCell.energyLevel < triggerValue && canbuild(PowerStation) == false && canbuild(PowerCaptor) == false) //can't do canbuild(list), it expects a int value (not list) or category name
+	else if (energyCell.energyLevel < triggerValue && canbuild(PowerStation) == false && canbuild(PowerCaptor) == false && energyCell.category == PowerCell) //can't do canbuild(list), it expects a int value (not list) or category name
 	{
-		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+		message("CollectTitanium4() - " + this.category + " " + this.id + " " + " - Power Station/Captor not accesible in this mission.", DisplayWarning);
 	}
 	
-	repair = radar(RepairCenter);
+	//integrity check
+	int repairList[];
 	
-	if(shieldLevel < 0.5)
+	repairList[0] = RepairCenter;
+	repairList[1] = Shielder;
+	
+	repair = radar(repairList);
+	
+	if(repair != null && shieldLevel < 0.5)
 	{
-		message("Structural integritty low, going to Repair Center", DisplayInfo);
-		goto(repair.position);
+		message("CollectRawResources() - " + this.category + " " + this.id + " " + " - Structural integritty low, going to Repair Center", DisplayInfo);
+		trygoto(repair.position);
 		while(shieldLevel < 1)
 		{
 			wait(1);
 		}
 	}
-	else if (shieldLevel < 0.5 && radar(repair.category) == null)
+	else if (shieldLevel < 0.5 && repair == null)
 	{
-		message("Power Station/Captor not found.", DisplayError);
+		message("CollectRawResources() - " + this.category + " " + this.id + " " + " - Power Station/Captor not found.", DisplayError);
 	}
-	else if (shieldLevel < 0.5 && canbuild(repair.category) == false)
+	else if (shieldLevel < 0.5 && canbuild(RepairCenter) == false && repair == null)
 	{
-		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+		message("CollectRawResources() - " + this.category + " " + this.id + " " + " - Power Station/Captor not accesible in this mission.", DisplayWarning);
 	}
 	
 	errmode(1);
+}
+bool object::NuclearCellCheck(object cell) // ensures the bot won't pick a PowerCell when having a NuclearCell inside just because the power meter is higher on the former
+{
+	
+	if (this.energyCell.category == PowerCell)
+	{
+		return true;
+	}
+	
+	float cellPower = cell.energyLevel;
+	float botBatteryPower = this.energyCell.energyLevel;
+	int botBatteryCategory = this.energyCell.category;
+	
+	//message("Power level of the bot: " + botBatteryPower + " and power level of the found cell: " + cellPower);
+	if (cellPower > botBatteryPower && (botBatteryCategory == NuclearCell && botBatteryPower < 0.01))
+	{
+		return false;
+	}
+	return false;
 }
 void object::trygoto(point pos)
 {
