@@ -10,6 +10,10 @@ extern void object::RecyclerAutomation()
 	}
 	else
 	{
+		if (search(BotFactory,position,0,4) != null)
+		{
+			move(-7);
+		}
 		if (underwaterWrecks != -1)
 		{
 			message("Number of wrecks found on the map: " + sizeof(wreckList) + "(" + underwaterWrecks + " underwater)");
