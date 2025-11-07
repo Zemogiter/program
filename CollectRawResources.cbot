@@ -5,7 +5,7 @@ extern void object::CollectRawResources()
 	
 	//CONFIG
 	int resourceToCollect = TitaniumOre; //what raw resource should be collected, choose between TitaniumOre and UraniumOre
-	int targetAmount = 10; //how many Titanium cubes is needed?
+	int targetAmount = 4; //how many Titanium cubes is needed?
 	//not implemented yet
 	//bool countAtBase = false; //if true, bot will only count Titanium cubes/Nuclear cells that are within given distance from base
 	//float baseDistance = 30; //distance from a object that counts as a base area
@@ -289,10 +289,40 @@ void object::Mainteneance(float triggerValue, int crashMode, bool verboseMode)
 	else if (energyCell.energyLevel < triggerValue && power == null && energyCell.category == PowerCell) //checking if we have power cell so that we wont display this error needlessly
 	{
 		message("CollectTitanium4() - " + this.category + " " + this.id + " " + " - Power Station/Captor not found.", DisplayError);
+		trygoto(cell.position, crashMode, verboseMode);
+		
+		if (load != null)
+		{
+			turn(90);
+			drop();
+			turn(-90);
+		}
+		
+		grab();
+		drop(Behind);
+		grab(EnergyCell);
+		drop();
+		grab(Behind);
+		drop(EnergyCell);
 	}
 	else if (energyCell.energyLevel < triggerValue && canbuild(PowerStation) == false && canbuild(PowerCaptor) == false && energyCell.category == PowerCell) //can't do canbuild(list), it expects a int value (not list) or category name
 	{
 		message("CollectTitanium4() - " + this.category + " " + this.id + " " + " - Power Station/Captor not accesible in this mission.", DisplayWarning);
+		trygoto(cell.position, crashMode, verboseMode);
+		
+		if (load != null)
+		{
+			turn(90);
+			drop();
+			turn(-90);
+		}
+		
+		grab();
+		drop(Behind);
+		grab(EnergyCell);
+		drop();
+		grab(Behind);
+		drop(EnergyCell);
 	}
 	
 	//integrity check
