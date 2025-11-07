@@ -1,0 +1,190 @@
+extern void object::ReturnBot5A() //program for the builder, reads info from the grabber to move to the right position and build the necessary stuff
+{
+	point placedCube;
+	object ship = radar(SpaceShip);
+	
+	if (sizeof(radarall(PowerCaptor)) <= 2)
+	{
+		//first PowerCaptor
+		while (testinfo("placedCubeX",20) == false)
+		{
+			wait(1);
+		}
+		message("Builder - Loading information from Exchange Post.");
+		
+		placedCube.x = receive("placedCubeX",20);
+		placedCube.y = receive("placedCubeY",20);
+		placedCube.z = receive("placedCubeZ",20);
+		
+		message("Builder - Removing original information for the grabber.");
+		deleteinfo("placedCubeX",20);
+		deleteinfo("placedCubeY",20);
+		deleteinfo("placedCubeZ",20);
+		message("Builder - Going to the placed cube to construct PowerCaptor.");
+		goto(placedCube);
+		build(PowerCaptor);
+		Maintenance(0.2);
+		message("Builder - Returning to spaceship to wait for further instructions.");
+		goto(ship.position);
+		//second PowerCaptor
+		while (testinfo("placedCubeX",20) == false)
+		{
+			wait(1);
+		}
+		message("Builder - Second PowerCaptor - Loading information from Exchange Post.");
+		
+		placedCube.x = receive("placedCubeX",20);
+		placedCube.y = receive("placedCubeY",20);
+		placedCube.z = receive("placedCubeZ",20);
+		
+		message("Builder - Second PowerCaptor - Removing original information for the grabber.");
+		deleteinfo("placedCubeX",20);
+		deleteinfo("placedCubeY",20);
+		deleteinfo("placedCubeZ",20);
+		message("Builder - Second PowerCaptor - Going to the placed cube to construct PowerCaptor.");
+		goto(placedCube);
+		build(PowerCaptor);
+		Maintenance(0.2);
+	}
+	
+	//base construction
+	//point placedCube;
+	
+	goto(ship.position);
+	
+	while (testinfo("placedCubeX",20) == false)
+	{
+		wait(1);
+	}
+	
+	message("Builder - BotFactory construction - Loading information from Exchange Post.");
+	
+	placedCube.x = receive("placedCubeX",20);
+	placedCube.y = receive("placedCubeY",20);
+	placedCube.z = receive("placedCubeZ",20);
+	
+	message("Builder - BotFactory construction - Removing original information for the grabber.");
+	deleteinfo("placedCubeX",20);
+	deleteinfo("placedCubeY",20);
+	deleteinfo("placedCubeZ",20);
+	message("Builder - BotFactory construction - Going to the placed cube.");
+	goto(placedCube);
+	build(BotFactory);
+	goto(space());
+	
+	/*
+	while (distance(position, center.position) < 40) //while we're within the protection distance of the PowerCaptor
+	{
+		int[] buildList;
+		int i = 0;
+		
+		//buildList[i++] = Derrick;
+		buildList[i++] = RadarStation;
+		buildList[i++] = Converter;
+		//buildList[i++] = BotFactory;
+		buildList[i++] = ExchangePost;
+		//buildList[i++] = PowerCaptor;
+		
+		int k = 0;
+		
+		message(" Builder - We're running with this build list: " + buildList);
+		wait(1);
+		
+		while (k != sizeof(buildList))
+		{
+			Maintenance(0.2);
+			
+			while(radar(Titanium) == null)
+			{
+				wait(1);
+			}
+			for (k = 0; k<=sizeof(buildList);k++)
+			{
+				errmode(0);
+				if (k == sizeof(buildList))
+				{
+					message("Builder - All possible buildings from the list are present. Ensure there are titanium cubes on power/resource spots. Halting program.");
+					break;
+				}
+				if (radar(buildList[k],0,360,0,1000,1) == null and canbuild(buildList[k]) == true) //if building is not present and possible to build
+				{
+					message("Builder - Going to Titanium cube to build " + buildList[k]);
+					//to-do: figure out how to get cube positions at base without ExchangePost
+					//goto(GetFarCube(center, distanceToCube));
+					
+					object cube = radar(Titanium, 0, 45, 0, 20);
+					float flat = flatground(cube.position,10);
+					
+					if(flat < 10)
+					{
+						message("Builder - Not enough flat ground around Titanium. Halting program.", DisplayError);
+						break;
+					}
+					message("Building " + buildList[k]);
+					build(buildList[k]);
+					goto(space());
+					break;
+				}
+				else if (radar(buildList[k],0,360,0,1000,1) != null ) //if building is already there, move to the next spot on the buildList
+				{
+					message("Builder - " + buildList[k] + " is already present on map. Changing to the next one in the build list.");
+					wait(1);
+					continue;
+				}
+				errmode(1);
+			}
+		}
+	}
+	*/
+}
+void object::Maintenance(float triggerValue)
+{
+	int list[], i;
+	object power,repair;
+	
+	i = 0;
+	list[i++] = PowerStation;
+	list[i++] = PowerCaptor;
+	errmode(0);
+	power = radar(list);
+	
+	if(energyCell.energyLevel < triggerValue && energyCell.category != NuclearCell)
+	{
+		message("Battery low, going to recharge facility", DisplayInfo);
+		goto(power.position);
+		while(energyCell.energyLevel < 1)
+		{
+			wait(1);
+		}
+	}
+	else if (energyCell.energyLevel < triggerValue and power == null and energyCell.category == PowerCell) //checking if we have power cell so that we wont display this error needlessly
+	{
+		message("Power Station/Captor not found.", DisplayError);
+	}
+	else if (energyCell.energyLevel < triggerValue and canbuild(PowerStation) == false && canbuild(PowerCaptor) == false) //can't do canbuild(list), it expects a int value (not list) or category name
+	{
+		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+	}
+	
+	repair = radar(RepairCenter);
+	
+	if(shieldLevel < triggerValue)
+	{
+		message("Structural integritty low, going to Repair Center", DisplayInfo);
+		goto(repair.position);
+		while(shieldLevel < 1)
+		{
+			wait(1);
+		}
+	}
+	else if (shieldLevel < triggerValue and repair == null)
+	{
+		message("Repair Center not found.", DisplayError);
+	}
+	else if (shieldLevel < triggerValue and canbuild(repair.category) == false)
+	{
+		message("Repair Center not accesible in this mission.", DisplayWarning);
+	}
+	
+	errmode(1);
+}

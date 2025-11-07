@@ -1,0 +1,200 @@
+extern void object::ReturnBot5() //a script for grabber in mission 2-4, moves cubes for builder bot then handles BotFactory
+{
+	object cube = radar(Titanium);
+	object ship = radar(SpaceShip);
+	object placedCube, pointA, pointB;
+	point cubePos;
+	int captorCount = sizeof(radarall(PowerCaptor));
+	
+	if (captorCount <= 2)
+	{
+		message("Grabber - stage one: securing foothold from extreme weather");
+		//First PowerCaptor
+		goto(cube.position);
+		grab();
+		goto(-11.5306,45.6639,29.5);
+		drop();
+		wait(0.5);
+		
+		object placedCube = radar(Titanium,0,45,0,5);
+		point cubePos = placedCube.position;
+		
+		message("Grabber - Cube for lightning conductor placed, moving to spaceship to relay information.");
+		goto(ship.position);
+		message("Sending placed cube coordinates for the builder.");
+		send("placedCubeX", placedCube.position.x,20);
+		send("placedCubeY", placedCube.position.y,20);
+		send("placedCubeZ", placedCube.position.z,20);
+		
+		while(search(PowerCaptor, cubePos,0,5) == null)
+		{
+			wait(1);
+		}
+		
+		//Second PowerCaptor
+		message("Grabber - We have the first lightning rod from space ship to BlueFlag, grabbing cube for the second one.");
+		
+		cube = radar(Titanium);
+		
+		goto(cube.position);
+		grab();
+		
+		object lightningRod = radar(PowerCaptor);
+		
+		message("Grabber - Going to recharge the battery while moving towards the destination");
+		goto(lightningRod.position);
+		while(energyCell.energyLevel < 1)
+		{
+			wait(1);
+		}
+		goto(-19.1714,87.9657,29.5);
+		drop();
+		wait(0.5);
+		
+		placedCube = radar(Titanium,0,45,0,5);
+		cubePos = placedCube.position;
+		
+		message("Grabber - Cube for lightning conductor placed, moving to spaceship to relay information.");
+		goto(ship.position);
+		message("Grabber - Sending placed cube coordinates for the builder.");
+		send("placedCubeX", placedCube.position.x,20);
+		send("placedCubeY", placedCube.position.y,20);
+		send("placedCubeZ", placedCube.position.z,20);
+		
+		while(search(PowerCaptor, cubePos,0,5) == null)
+		{
+			wait(1);
+		}
+	}
+	
+	//BotFactory construction
+	if (radar(BotFactory) == null)
+	{
+		message("Grabber - Stage two: BotFactory construction");
+		pointA = radar(PowerCaptor,0,360,0,1000,1);
+		pointB = radar(PowerCaptor,0,360,0,1000,-1);
+		point midPoint;
+		midPoint.x = ((pointA.position.x + pointB.position.x) / 2);
+		midPoint.y = ((pointA.position.y + pointB.position.y) / 2);
+		midPoint.z = ((pointA.position.z + pointB.position.z) / 2);
+		cube = radar(Titanium);
+		
+		goto(cube.position);
+		grab();
+		goto(midPoint);
+		drop();
+		wait(0.5);
+		
+		placedCube = radar(Titanium,0,45,0,5);
+		cubePos = placedCube.position;
+		
+		message("Grabber - Cube for BotFactory placed, moving to spaceship to relay information.");
+		goto(ship.position);
+		message("Grabber - Sending placed cube coordinates for the builder.");
+		send("placedCubeX", placedCube.position.x,20);
+		send("placedCubeY", placedCube.position.y,20);
+		send("placedCubeZ", placedCube.position.z,20);
+		
+		while(search(BotFactory, cubePos,0,5) == null)
+		{
+			wait(1);
+		}
+	}
+	
+	//Bot construction
+	object botFactory = radar(BotFactory);
+	object rechargePoint = search(PowerCaptor, botFactory.position,0,1000,-1);
+	
+	if (radar(Recycler) == null)
+	{
+		BotConstructionStage(Recycler, cube, rechargePoint);
+	}
+	else if (radar(Recycler) != null && radar(TrackedBuilder) == null)
+	{
+		BotConstructionStage(TrackedBuilder, cube, rechargePoint);
+	}
+	else
+	{
+		BotConstructionStage(TrackedSniffer, cube, rechargePoint);
+	}
+}
+void object::trygoto(point pos)
+{
+	errmode(0);
+	int tries = 0;
+	while (distance(position, pos) > 0) //While we are moving towards destination...
+	{
+		while (goto(pos) != 0) //How we are handling goto() errors
+		{
+			if(tries > 2)
+			{
+				point midPoint;
+				midPoint.x = ((position.x + pos.x) / 2);
+				midPoint.y = ((position.y + pos.y) / 2);
+				midPoint.z = ((position.z + pos.z) / 2);
+				goto(midPoint);
+				wait(1);
+				goto(pos, 0, 1);
+				break;
+			}
+			else wait(2);
+			tries++;
+		}
+		errmode(1);
+		break;
+	}
+}
+void object::BotConstructionStage(int botCategory, object cube, object pointA)
+{
+	message("Stage three: " + botCategory + " construction.");
+	if (load != null)
+	{
+		goto(space());
+		drop();
+	}
+	
+	object botFactory = radar(BotFactory);
+	cube = radar(Titanium);
+	
+	goto(cube.position);
+	grab();
+	goto(GetFactoryFront(botFactory));
+	turn(direction(botFactory.position));
+	move(3);
+	drop();
+	move(-3);
+	factory(botCategory);
+	
+	object cell = radar(PowerCell);
+	
+	goto(cell.position);
+	grab();
+	if (load.energyLevel < 1)
+	{
+		goto(pointA.position);
+		while (load.energyLevel < 1)
+		{
+			wait(1);
+		}
+	}
+	goto(GetFactoryFront(botFactory));
+	turn(direction(botFactory.position));
+	
+	while (isbusy(botFactory) == true)
+	{
+		wait(1);
+	}
+	
+	drop();
+	goto(space());
+}
+point object::GetFactoryFront(object botFactory) // returns a point in front of the BotFactory, grabber goes there instead of the building itself, preventing issues with constantly bumping into it (or the bot inside it) or clipping the building's gate since it's not a solid object, huge thanks to tomaszkax86 for providing a solution 
+{
+	float angle = botFactory.orientation;
+	float radius = 5;
+	point factoryFront;
+	factoryFront.x = botFactory.position.x + radius * cos(angle);
+	factoryFront.y = botFactory.position.y + radius * sin(angle);
+	
+	return factoryFront;
+}
