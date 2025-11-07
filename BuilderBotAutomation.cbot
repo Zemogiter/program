@@ -3,12 +3,20 @@ extern void object::BuilderBotAutomation() //simple builder bot program, checks 
 	bool stayCloseToBase = true; //change accordingly
 	bool countinousMode = true; //builder will automaticaly try to make the next building on the list
 	object center = radar(SpaceShip); //change accordingly
-	float distanceToCube = 15; //how far from the center of the base (i.e. SpaceShip) should the cube be?
+	float distanceToCube = 10; //how far from the center of the base (i.e. SpaceShip) should the cube be?
 	float triggerValue = 0.4; //if battery is below this level, we will try to recharge
 	
 	if(center == null)
 	{
-		message("No SpaceShip on map");
+		message("Base center not found, halting script.");
+		return;
+	}
+	
+	//message("DEBUG - number of cubes existing on the map: " + sizeof(radarall(Titanium)));
+	
+	if (radar(Titanium) == null)
+	{
+		message("No cube on the map, halting script.", DisplayWarning);
 		return;
 	}
 	
@@ -62,10 +70,8 @@ extern void object::BuilderBotAutomation() //simple builder bot program, checks 
 	{
 		buildList[i++] = RepairCenter;
 	} 
-	//buildList[i++] = DefenseTower;
 	buildList[i++] = AutoLab;
 	buildList[i++] = NuclearPlant; 
-	//buildList[i++] = PowerCaptor;
 	
 	int k = 0;
 	
@@ -95,13 +101,17 @@ extern void object::BuilderBotAutomation() //simple builder bot program, checks 
 			{
 				message("Going to Titanium cube to build " + buildList[k]);
 				goto(GetFarCube(center, distanceToCube));
-				object cube = radar(Titanium, 0, 45, 0, 20);
+				//to-do: fix this so that it detects flat space around the cube correctly and won't loop ad infinitum
+				/*
+				object cube = radar(Titanium, 0, 45, 0, 5);
 				float flat = flatground(cube.position,10);
-				if(flat >= 10)
+				
+				if(flat < 1)
 				{
 					message("Not enough flat ground around Titanium. Halting program.", DisplayError);
 					break;
 				}
+				*/
 				message("Building " + buildList[k]);
 				build(buildList[k]);
 				goto(space());
@@ -180,19 +190,20 @@ void object::Maintenance(float triggerValue)
 	
 	errmode(1);
 }
-point object::GetFarCube(object ship, float distanceToCube)
+point object::GetFarCube(object center, float distanceToCube)
 {
 	errmode(0);
 	object[] cubeList = radarall(Titanium);
 	object FarCube;
+	
 	for (int i = 0;i <= sizeof(cubeList);i++)
 	{
 		if (i == sizeof(cubeList))
 		{
-			message("No Titanium cubes sufficently far away from " + ship.category + ", halting program", DisplayWarning);
+			message("No Titanium cubes sufficently far away from " + center.category + ", halting program", DisplayWarning);
 			break;
 		}
-		if (distance(ship.position, cubeList[i].position) >= distanceToCube && search(Converter,cubeList[i].position,0,4) == null)
+		if (distance(center.position, cubeList[i].position) >= distanceToCube && BusyCubeCheck(cubeList[i]) == true)
 		{
 			FarCube = cubeList[i];
 			break;
@@ -201,4 +212,57 @@ point object::GetFarCube(object ship, float distanceToCube)
 	}
 	return FarCube.position;
 	errmode(1);
+}
+bool object::BusyCubeCheck(object cube) //checks if a cube is inside a building and thus, should be avoided
+{
+	object[] converterList = radarall(Converter);
+	object[] botFactoryList = radarall(BotFactory);
+	bool converterCheck = false;
+	bool botFactoryCheck = false;
+	
+	if (converterList != null)
+	{
+		for (int i = 0; i == sizeof(converterList); i++)
+		{
+			if (converterList != null && i == sizeof(converterList))
+			{
+				message ("No free cube found.", DisplayWarning);
+			}
+			if (distance(converterList[i].position, cube.position) > 5)
+			{
+				converterCheck = true;
+			}
+		}
+		
+	}
+	else
+	{
+		converterCheck == true;
+	}
+	
+	if (botFactoryList != null)
+	{
+		for (int i = 0; i == sizeof(botFactoryList); i++)
+		{
+			if (botFactoryList != null && i == sizeof(botFactoryList))
+			{
+				message ("No free cube found.", DisplayWarning);
+			}
+			if (distance(botFactoryList[i].position, cube.position) > 5)
+			{
+				botFactoryCheck = true;
+			}
+		}
+	}
+	else
+	{
+		botFactoryCheck = true;
+	}
+	
+	if (converterCheck == true && botFactoryCheck == true)
+	{
+		message("Found a cube that is far enough from the base center.");
+		return true;
+	}
+	return false; 
 }
