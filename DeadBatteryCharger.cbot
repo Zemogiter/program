@@ -1,6 +1,6 @@
 extern void object::DeadBatteryCharger()
 {
-	int deliveryMode = 1; //0 = deliver battery to the position grabber was at program activation, 1 = put it near the PowerStation/Captor, 2 = go where the PowerCell was before recharge, 3 = go to base, define what is considerd a base object in the variable below
+	int deliveryMode = 2; //0 = deliver battery to the position grabber was at program activation, 1 = put it near the PowerStation/Captor, 2 = go where the PowerCell was before recharge, 3 = go to base, define what is considerd a base object in the variable below
 	object baseObject = radar(SpaceShip);
 	
 	object[] batteryList = radarall(PowerCell);
@@ -22,6 +22,11 @@ extern void object::DeadBatteryCharger()
 	else if (load != null && load.category != PowerCell)
 	{
 		message("Invalid object in claw.");
+		goto(space());
+		drop();
+	}
+	else if (load != null && load.category == PowerCell && load.energyLevel == 1)
+	{
 		goto(space());
 		drop();
 	}
