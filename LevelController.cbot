@@ -9,7 +9,7 @@ Your options:
 3. Make the space ship non-selectable CreateObject type=SpaceShip selectable=0 ...
 4. Add an EndMissionTake that will never be satisfied with immediat=1. Example: EndMissionTake pos=0;0 dist=1000type=Me min=20 immediat=1
 
-produce() does not support object.shield or object.load as a parameter for the object to bespawned, so collecting those is pointless at the moment
+produce() does not support object.shield or object.load as a parameter for the object to be spawned, so collecting those is pointless at the moment
 */
 extern void object::LevelController() // script to be executed on LevelController, reads certain txt files in user directory, spawns object accordingly, waits for the right condition, then saves the objects on map to be spawned on the next mission, then ends the current mission/allows the player to take off
 {
@@ -573,7 +573,7 @@ void object::ObjectLoader()
 	}
 	handle7.close();
 }
-float object::FigureOutCell(string ccString, string clString) //since produce() does not know what to do with object.cell, we need to extract usefull information from it
+float object::FigureOutCell(string ccString, string clString) //since produce() does not know what to do with object.cell, we need to extract useful information from it
 {
 	int cellCategory;
 	

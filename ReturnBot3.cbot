@@ -8,7 +8,7 @@ extern void object::ReturnBot3() //A program for titanium gathering in mission 2
 	
 	int counter = 0;
 	
-	Mainteneance(triggerValue);
+	Maintenance(triggerValue);
 	
 	if (load != null && load.category == TitaniumOre)
 	{
@@ -43,7 +43,7 @@ extern void object::ReturnBot3() //A program for titanium gathering in mission 2
 		drop();
 	}
 	
-	Mainteneance(triggerValue);
+	Maintenance(triggerValue);
 	
 	
 }
@@ -73,7 +73,7 @@ void object::trygoto(point pos)
 		break;
 	}
 }
-void object::Mainteneance(float triggerValue)
+void object::Maintenance(float triggerValue)
 {
 	errmode(0);
 	
@@ -86,7 +86,7 @@ void object::Mainteneance(float triggerValue)
 	
 	if (this.energyCell.energyLevel <= triggerValue && cell.energyLevel >= this.energyCell.energyLevel)
 	{
-		message("Battery low, swaping with a different one");
+		message("Battery low, swapping with a different one");
 		trygoto(cell.position);
 		if (load != null)
 		{

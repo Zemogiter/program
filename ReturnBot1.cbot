@@ -1,4 +1,4 @@
-extern void object::RetunBot1() //a simple program that prepares the cubes for mission 1-2
+extern void object::ReturnBot1() //a simple program that prepares the cubes for mission 1-2
 {
 	object cube, post, cubeInFront, cell, ship;
 	
@@ -37,14 +37,14 @@ extern void object::RetunBot1() //a simple program that prepares the cubes for m
 	message("Operational BotFactory detected, creating the second WheeledGrabber.");
 	if (load != null && load.category == Titanium)
 	{
-		object fabrika = radar(BotFactory,0,360,1,1000,-1);
+		object botFactory = radar(BotFactory,0,360,1,1000,-1);
 		
-		if (search(Titanium,fabrika.position,0,3) != null) //there is already a titanum cube in BotFactory)
+		if (search(Titanium,botFactory.position,0,3) != null) //there is already a titanium cube in BotFactory)
 		{
 			goto(space());
 			drop();
 		}
-		goto(fabrika.position);
+		goto(botFactory.position);
 		if (load != null)
 		{
 			drop();
@@ -65,12 +65,12 @@ extern void object::RetunBot1() //a simple program that prepares the cubes for m
 		goto(cell.position);
 		grab();
 		
-		float angle = fabrika.orientation;
+		float angle = botFactory.orientation;
 		float radius = 5;
-		point factoryFront (fabrika.position.x + radius * cos(angle), fabrika.position.y + radius * sin(angle));
+		point factoryFront (botFactory.position.x + radius * cos(angle), botFactory.position.y + radius * sin(angle));
 		
 		goto(factoryFront);
-		while(isbusy(fabrika) == true)
+		while(isbusy(botFactory) == true)
 		{
 			wait(1);
 		}
@@ -84,19 +84,19 @@ extern void object::RetunBot1() //a simple program that prepares the cubes for m
 		goto(cube.position);
 		grab();
 		
-		object fabrika = radar(BotFactory,0,360,1,1000,-1);
+		object botFactory = radar(BotFactory,0,360,1,1000,-1);
 		
-		if (search(Titanium,fabrika.position,0,3) != null) //there is already a titanum cube in BotFactory)
+		if (search(Titanium,botFactory.position,0,3) != null) //there is already a titanium cube in BotFactory)
 		{
 			goto(space());
 			drop();
 		}
-		goto(fabrika.position);
+		goto(botFactory.position);
 		if (load != null)
 		{
 			drop();
 		}
-		goto(fabrika.position);
+		goto(botFactory.position);
 		drop();
 		move(-2);
 		factory(WheeledGrabber);
@@ -113,12 +113,12 @@ extern void object::RetunBot1() //a simple program that prepares the cubes for m
 		goto(cell.position);
 		grab();
 		
-		float angle = fabrika.orientation;
+		float angle = botFactory.orientation;
 		float radius = 5;
-		point factoryFront (fabrika.position.x + radius * cos(angle), fabrika.position.y + radius * sin(angle));
+		point factoryFront (botFactory.position.x + radius * cos(angle), botFactory.position.y + radius * sin(angle));
 		
 		goto(factoryFront);
-		while(isbusy(fabrika) == true)
+		while(isbusy(botFactory) == true)
 		{
 			wait(1);
 		}

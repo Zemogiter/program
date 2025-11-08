@@ -3,7 +3,7 @@ extern void object::FollowAndGuard()
 	int allyType = WheeledGrabber; // put ally here (i.e. LeggedGrabber)
 	int keepCloseDist = 5;        // how far behind to follow
 	int perimeterToScan = 50;     // range to look for enemy
-	bool canScanSubsoil = true; // set to false if you dont want sniffers to sniff if they're following something
+	bool canScanSubsoil = true; // set to false if you don't want Sniffers to sniff if they're following something
 	bool canBuild = true; // as above but for builders
 	int cat = PowerStation; //category of building to construct by the builder
 	
@@ -39,13 +39,13 @@ extern void object::FollowAndGuard()
 		follow(allyType, keepCloseDist, enemyList, canScanSubsoil, canBuild, cat);
 	}
 }
-void object::follow(int allyType, int parimeter, int[] enemyList, bool canScanSubsoil, bool canBuild, int cat)
+void object::follow(int allyType, int perimeter, int[] enemyList, bool canScanSubsoil, bool canBuild, int cat)
 {
 	object ally = radar(allyType);
 	object enemy = radar(enemyList);
 	float dis = distance(position,ally.position);
 	
-	if(dis > parimeter)                           // if too far away from ally
+	if(dis > perimeter)                           // if too far away from ally
 	{
 		float dif = ally.position.z-position.z;
 		float ang = asin(dif/dis);
@@ -74,9 +74,9 @@ void object::follow(int allyType, int parimeter, int[] enemyList, bool canScanSu
 		spotList[6] = KeyDSpot;
 		object spot = radar(spotList);
 		
-		if (SnifferCheck() == true and canScanSubsoil == true and (spot == null or distance(position, spot.position) > 10) and dis < parimeter)
+		if (SnifferCheck() == true and canScanSubsoil == true and (spot == null or distance(position, spot.position) > 10) and dis < perimeter)
 		{
-			message("Debug: Distance is " + dis + " while parimeter is " + parimeter + ", engaging sniff.");
+			message("Debug: Distance is " + dis + " while perimeter is " + perimeter + ", engaging sniff.");
 			if(topo(position) > 0)
 			{
 				jet(-1);
@@ -102,7 +102,7 @@ void object::follow(int allyType, int parimeter, int[] enemyList, bool canScanSu
 	}
 	else                                          // otherwise too close
 	{ 
-		motor(dis/parimeter-1, dis/parimeter-1);  // back up a little
+		motor(dis/perimeter-1, dis/perimeter-1);  // back up a little
 		if(topo(position) > 0)                    // if not over water
 		jet(-1);                                  // then land to conserve energy/minimize heat
 	}
@@ -182,7 +182,7 @@ void object::moveAndDestroy(object target)
 	dif = target.position.z-position.z;
 	ang = asin(dif/dis);
 	
-	jet(1-(ang/-20));                         // thrust until 20 degress above target
+	jet(1-(ang/-20));                         // thrust until 20 degrees above target
 	
 	dir = direction(target.position); 
 	
@@ -204,7 +204,7 @@ void object::moveAndDestroy(object target)
 boolean object::LOS(object objTarget, float fltDist)
 {
 	if(objTarget == null) return false;    //if it doesn't exist you can't see it
-	ipf(10000);                            //Zip through the code AFAP
+	ipf(10000);                            //Zip through the code ASAP
 	point pntCheck;
 	point pntScale;
 	point pntHigh;

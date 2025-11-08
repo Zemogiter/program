@@ -4,7 +4,7 @@ extern void object::UraniumProcessingSubber() //A two-parter, this one is to be 
 	
 	object resource = radar(UraniumOre);
 	object post = radar(ExchangePost);
-	object uranInFront;
+	object uraniumInFront;
 	
 	while(RefreshList() <= targetAmount)
 	{
@@ -15,7 +15,7 @@ extern void object::UraniumProcessingSubber() //A two-parter, this one is to be 
 		}
 		if (category != Subber)
 		{
-			message("Only for Subbers!", DisplayError);
+			message("Only for Subber bots!", DisplayError);
 			break;
 		}
 		Maintenance();
@@ -25,13 +25,13 @@ extern void object::UraniumProcessingSubber() //A two-parter, this one is to be 
 		goto(space(post.position));
 		drop();
 		wait(1);
-		uranInFront = radar(resource.category, 0, 45, 0, 20);;
-		if(uranInFront != null)
+		uraniumInFront = radar(resource.category, 0, 45, 0, 20);;
+		if(uraniumInFront != null)
 		{
-			send("PosX",uranInFront.position.x,100);
-			send("PosY",uranInFront.position.y,100);
-			send("PosZ",uranInFront.position.z,100);
-			resource = FindNextResource(uranInFront);
+			send("PosX",uraniumInFront.position.x,100);
+			send("PosY",uraniumInFront.position.y,100);
+			send("PosZ",uraniumInFront.position.z,100);
+			resource = FindNextResource(uraniumInFront);
 		}
 		else
 		{
@@ -82,9 +82,9 @@ void object::Maintenance()
 		}
 	}
 }
-object object::FindNextResource(object uranInFront)
+object object::FindNextResource(object uraniumInFront)
 {
-	if(uranInFront != null)
+	if(uraniumInFront != null)
 	{
 		object[] resourceList = radarall(UraniumOre);
 		return resourceList[1];

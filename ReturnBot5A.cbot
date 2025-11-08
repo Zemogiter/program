@@ -163,14 +163,14 @@ void object::Maintenance(float triggerValue)
 	}
 	else if (energyCell.energyLevel < triggerValue and canbuild(PowerStation) == false && canbuild(PowerCaptor) == false) //can't do canbuild(list), it expects a int value (not list) or category name
 	{
-		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+		message("Power Station/Captor not accessible in this mission.", DisplayWarning);
 	}
 	
 	repair = radar(RepairCenter);
 	
 	if(shieldLevel < triggerValue)
 	{
-		message("Structural integritty low, going to Repair Center", DisplayInfo);
+		message("Structural integrity low, going to Repair Center", DisplayInfo);
 		goto(repair.position);
 		while(shieldLevel < 1)
 		{
@@ -183,7 +183,7 @@ void object::Maintenance(float triggerValue)
 	}
 	else if (shieldLevel < triggerValue and canbuild(repair.category) == false)
 	{
-		message("Repair Center not accesible in this mission.", DisplayWarning);
+		message("Repair Center not accessible in this mission.", DisplayWarning);
 	}
 	
 	errmode(1);

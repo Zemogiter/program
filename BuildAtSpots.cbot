@@ -24,7 +24,7 @@ extern void object::BuildAtSpots() //A simplified version of BuilderBotAutomatio
 			{
 				message("Going to " + spotList2[i].category + ", attempting to build PowerStation");
 				goto(space(spotList2[i].position));
-				PositionAjustment(spotList2[i]);
+				PositionAdjustment(spotList2[i]);
 				build(PowerStation);
 			}
 			else if(spotList2[i].category == PowerSpot && radar(PowerStation) != null && canbuild(PowerPlant) == true)
@@ -38,7 +38,7 @@ extern void object::BuildAtSpots() //A simplified version of BuilderBotAutomatio
 					message("Going to " + spotList2[i].category + ", attempting to build PowerPlant");
 				}
 				goto(space(spotList2[i].position));
-				PositionAjustment(spotList2[i]);
+				PositionAdjustment(spotList2[i]);
 				if (forcePowerStation == true)
 				{
 					build(PowerStation);
@@ -64,7 +64,7 @@ extern void object::BuildAtSpots() //A simplified version of BuilderBotAutomatio
 				}
 				message("Going to " + spotList2[i].category + ", attempting to build Derrick");
 				goto(space(spotList2[i].position));
-				PositionAjustment(spotList2[i]);
+				PositionAdjustment(spotList2[i]);
 				build(Derrick);
 			}
 		}
@@ -80,7 +80,7 @@ extern void object::BuildAtSpots() //A simplified version of BuilderBotAutomatio
 		}
 	}
 }
-void object::PositionAjustment(object spot)
+void object::PositionAdjustment(object spot)
 {
 	errmode(0);
 	turn(direction(spot.position));

@@ -32,7 +32,7 @@ extern void object::ObjectGrabAndMove()
 		trygoto(space(ship.position));
 		drop();
 	}
-	else if((matter != null and box == null and ship != null) or (box != null and distance(ship.position,box.position) < 10) or boxesAtShip == blackboxCount) //if BB doesen't exist or is already aboard the ship in a given amount, bot will handle OrgaMatter research/hauling
+	else if((matter != null and box == null and ship != null) or (box != null and distance(ship.position,box.position) < 10) or boxesAtShip == blackboxCount) //if BB doesn't exist or is already aboard the ship in a given amount, bot will handle OrgaMatter research/hauling
 	{
 		message("BlackBox does not exist or is already on board in given amount, going for OrgaMatter.");
 		

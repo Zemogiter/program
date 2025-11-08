@@ -32,16 +32,16 @@ void object::MainLoop(float dist,object spot,object power,object shooter)
 		if(load == null && dist > 50 && spot == null) //if nothing in claw, aliens are far away from grabber, no PowerSpot exists on map - grabber will get a new cube from base and return to the escort
 		{
 			point escortLocation = position;
-			Mainteneance();
+			Maintenance();
 			while (radar(Titanium) == null)
 			{
-				message("Waiting for the titanium vube to be produced");
+				message("Waiting for the titanium to be to be produced");
 				wait(30);
 			}
 			object cube = radar(Titanium,0,360,0,1000,-1);
 			trygoto(cube.position);
 			grab();
-			Mainteneance();
+			Maintenance();
 			trygoto(escortLocation);
 			if(distance(position,shooter.position) < 15) //bot fount it's escort at the original position
 			{
@@ -58,11 +58,11 @@ void object::MainLoop(float dist,object spot,object power,object shooter)
 		}
 		else if(load == null && power != null && distance(position,power.position) < 45) //grabber is just joining the escort
 		{
-			Mainteneance();
+			Maintenance();
 			object cube = radar(Titanium,0,360,0,1000,-1);
 			trygoto(cube.position);
 			grab();
-			Mainteneance();
+			Maintenance();
 			while (distance(position, shooter.position) > 10)
 			{
 				trygoto(shooter.position);
@@ -71,7 +71,7 @@ void object::MainLoop(float dist,object spot,object power,object shooter)
 		}
 		else if(load != null && load.category == Titanium && power != null && distance(position,power.position) < 45) //as above, but bot has the cube already
 		{
-			Mainteneance();
+			Maintenance();
 			while (distance(position, shooter.position) > 10)
 			{
 				trygoto(shooter.position);
@@ -118,7 +118,7 @@ void object::trygoto(point pos)
 		break;
 	}
 }
-void object::Mainteneance()
+void object::Maintenance()
 {
 	object power = radar(PowerStation);
 	errmode(0);

@@ -1,4 +1,4 @@
-extern void object::ReturnBot9() //program to retreive TNT in 1st mission on Tropica
+extern void object::ReturnBot9() //program to retrieve TNT in 1st mission on Tropica
 {
 	object box,ship,wreck;
 	ship = radar(SpaceShip);

@@ -1,4 +1,4 @@
-//A collection of code I had issues with and decided to either replace it or scrap alltogether. For research and archival.
+//A collection of code I had issues with and decided to either replace it or scrap altogether. For research and archive purposes.
 if (derrick != nullPoint && alien != nullPoint && distance(OreCheck(cooperativeMode), alien) < 40 && oreCount > 1) //If derrick exists, is not the only source for a titanium ore and the surface ore is unsafe due to alien presence, grabber will go to the derrick
 {
 	message("Scenario 1 - going to derrick because surface ore is unsafe.");

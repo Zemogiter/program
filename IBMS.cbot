@@ -1,7 +1,7 @@
 extern void object::IBMS()
 {
 	int baseSize = 30; //how big is the base supposed to be
-	int resRequiredAmount = 15; //amount of resources that should be wihtnin base's borders
+	int resRequiredAmount = 15; //amount of resources that should be within base's borders
 	int resWarnAmount = 2; //warn when only this many resources are in the base
 	int baseCenter = BlueFlag; //used to calculate base size, change accordingly
 	   
@@ -9,7 +9,7 @@ extern void object::IBMS()
 	bool warnCell = false;
 	point base = GetBaseCenter(baseCenter);
 	   
-	message("Inteligent Base Management System v1.0", DisplayMessage);
+	message("Intelligent Base Management System v1.0", DisplayMessage);
 	message("Base centered at "+base.x+";"+base.y+";"+base.z, DisplayInfo);
 	while (true) 
 	{

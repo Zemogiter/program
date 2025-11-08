@@ -173,9 +173,9 @@ void object::PowerHandler(bool riskTaking)
 		message("No PowerCell/NuclearCell found, moving to make one.");
 		if (riskTaking == true)
 		{
-			object uran = radar(UraniumOre);
+			object ore = radar(UraniumOre);
 			object atomic = radar(NuclearPlant);
-			trygoto(uran.position);
+			trygoto(ore.position);
 			grab();
 			trygoto(atomic.position);
 			drop();

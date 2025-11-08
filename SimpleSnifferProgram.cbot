@@ -1,6 +1,6 @@
 extern void object::SimpleSnifferProgram()
 {
-	bool goHome = false; // set to false if you dont want the sniffer to return to its original position
+	bool goHome = false; // set to false if you don't want the sniffer to return to its original position
 	bool cleanUp = true; // if true, sniffer will remove the flags
 	
 	point orgPosition = position;
@@ -24,7 +24,7 @@ extern void object::SimpleSnifferProgram()
 	wait(1);
 	message("All handlers completed, spots are ready to be built on.", DisplayInfo);
 	
-	if (cleanUp == true) // fix this so that it dosen't stop after removing one flag
+	if (cleanUp == true) // fix this so that it doesn't stop after removing one flag
 	{
 		message("Flag cleanup requested.");
 		int i = 0;
@@ -65,7 +65,7 @@ void object::PowerFlagHandler()
 	}
 	else if (sizeof(radarall(PowerSpot)) >= 2)
 	{
-		message("Skipping power source snigging, two PowerSpots aleady found.");
+		message("Skipping power source sniffing, two PowerSpots already found.");
 		return;
 	}
 	else if(sizeof(radarall(PowerSpot)) == 1)

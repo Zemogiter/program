@@ -38,10 +38,10 @@ extern void object::RecyclerAutomation()
 	{
 		if (energyCell != null && energyCell.energyLevel < 0.5 && energyCell.category != NuclearCell or shieldLevel < 0.5) //Check for battery/integrity before anything else
 		{
-			Mainteneance();
+			Maintenance();
 		}
 		
-		object wreckInFront = radar(Wreck,0,50,0,5); //handling wrecks right in front separatly to avoid unnecessary moving the recycler and wasting battery
+		object wreckInFront = radar(Wreck,0,50,0,5); //handling wrecks right in front separately to avoid unnecessary moving the recycler and wasting battery
 		
 		if(wreckInFront != null)
 		{
@@ -82,7 +82,7 @@ void object::RecyclerMainFunction(object wreckInFront)
 	errmode(0);
 	if (wreckInFront != null)
 	{
-		RecyclerFailiureHandler(wreckInFront);
+		RecyclerFailureHandler(wreckInFront);
 	}
 	UltimaGoto(wreckCheck().position,5,true);
 	//message("DEBUG - topo of the destination: " + topo(wreckCheck().position));
@@ -100,7 +100,7 @@ void object::RecyclerMainFunction(object wreckInFront)
 	}
 	errmode(1);
 }
-void object::RecyclerFailiureHandler(object wreckInFront) // handles cases when Recycler gets stuck when recycling
+void object::RecyclerFailureHandler(object wreckInFront) // handles cases when Recycler gets stuck when recycling
 {
 	message("Recycler failiure, repositioning.", DisplayWarning);
 	float angle = wreckInFront.orientation;
@@ -118,7 +118,7 @@ void object::RecyclerFailiureHandler(object wreckInFront) // handles cases when 
 	}
 	else if (topo(otherSide) < 0)
 	{
-		message("Cannot ajust position, halting program!", DisplayError);
+		message("Cannot adjust position, halting program!", DisplayError);
 		return;
 	}
 }
@@ -152,7 +152,7 @@ object object::wreckCheck()
 	message("No safe to reach wrecks found.", DisplayWarning);
 	return null;
 }
-void object::Mainteneance()
+void object::Maintenance()
 {
 	int list[], i;
 	object power,repair;
@@ -180,14 +180,14 @@ void object::Mainteneance()
 	}
 	else if (energyCell.energyLevel < 0.5 && canbuild(PowerStation) == false && canbuild(PowerCaptor) == false) //can't do canbuild(list), it expects a int value (not list) or category name
 	{
-		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+		message("Power Station/Captor not accessible in this mission.", DisplayWarning);
 	}
 	
 	repair = radar(RepairCenter);
 	
 	if(shieldLevel < 0.5)
 	{
-		message("Structural integritty low, going to Repair Center", DisplayInfo);
+		message("Structural integrity low, going to Repair Center", DisplayInfo);
 		UltimaGoto(repair.position,0,false);
 		while(shieldLevel < 1)
 		{
@@ -200,7 +200,7 @@ void object::Mainteneance()
 	}
 	else if (shieldLevel < 0.5 && canbuild(repair.category) == false)
 	{
-		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+		message("Power Station/Captor not accessible in this mission.", DisplayWarning);
 	}
 	
 	errmode(1);

@@ -1,6 +1,6 @@
 extern void object::Researcher()
 {
-	bool continiousMode = true; // if true, grabber will wait at ResearchCenter until it finishes researching, then grab the battery and start the cycle again
+	bool continuousMode = true; // if true, grabber will wait at ResearchCenter until it finishes researching, then grab the battery and start the cycle again
 	
 	object[] batteryList = radarall(PowerCell);
 	int list[], i;
@@ -30,7 +30,7 @@ extern void object::Researcher()
 			message("Bot has PowerCell in claw, moving to ResearchCenter");
 			goto(center.position);
 			drop();
-			Research(continiousMode);
+			Research(continuousMode);
 		}
 		else if(load != null && load.category == PowerCell && load.energyLevel < 1 && recharge != null) //battery in claw is not full, PowerStation exists
 		{
@@ -42,7 +42,7 @@ extern void object::Researcher()
 			}
 			goto(center.position);
 			drop();
-			Research(continiousMode);
+			Research(continuousMode);
 		}
 		else if(load != null && load.category == PowerCell && load.energyLevel < 1 && recharge == null) //battery in claw is not full, no PowerStation on map
 		{
@@ -52,7 +52,7 @@ extern void object::Researcher()
 			grab();
 			goto(center.position);
 			drop();
-			Research(continiousMode);
+			Research(continuousMode);
 		}
 		else // finally, grabber searches for a full PowerCell on the map, or makes one if not found
 		{
@@ -73,7 +73,7 @@ extern void object::Researcher()
 					grab();
 					goto(center.position);
 					drop();
-					Research(continiousMode);
+					Research(continuousMode);
 				}
 				if(batteryList[i].energyLevel < 1 && recharge != null) //the closest found PowerCell is not full
 				{
@@ -86,7 +86,7 @@ extern void object::Researcher()
 					}
 					goto(center.position);
 					drop();
-					Research(continiousMode);
+					Research(continuousMode);
 				}
 				if (recharge == null && cube != null && make != null) //no way to recharge, we have the means to manufacture a power cell for the ResearchCenter
 				{
@@ -102,7 +102,7 @@ extern void object::Researcher()
 					grab();
 					goto(center.position);
 					drop();
-					Research(continiousMode);
+					Research(continuousMode);
 				}
 				else if(batteryList[i].energyLevel == 1) //the closest found PowerCell is full
 				{
@@ -110,7 +110,7 @@ extern void object::Researcher()
 					grab();
 					goto(center.position);
 					drop();
-					Research(continiousMode);
+					Research(continuousMode);
 				}
 				break;
 				errmode(1);
@@ -139,15 +139,15 @@ extern void object::Researcher()
 		}
 		goto(center.position);
 		drop();
-		Research(continiousMode);
+		Research(continuousMode);
 	}
 	else //Power Cell is in place and fully charged
 	{
-		Research(continiousMode);
+		Research(continuousMode);
 	}
 	
 }
-void object::Research(bool continiousMode) //Main research function
+void object::Research(bool continuousMode) //Main research function
 {
 	int[] researchList; //same order as the buttons in ResearchCenter's UI
 	int i = 0;
@@ -171,7 +171,7 @@ void object::Research(bool continiousMode) //Main research function
 		{
 			research(researchList[j]);
 			message("Started research on " + researchList[j], DisplayInfo);
-			if(continiousMode == true && j != sizeof(researchList))
+			if(continuousMode == true && j != sizeof(researchList))
 			{
 				object center = radar(ResearchCenter,0,360,0,10);
 				while(isbusy(center) == true)

@@ -21,8 +21,8 @@ extern void object::BasicBaseManagement()
 		{
 			ShooterCreate(shooter);
 		}
-		Mainteneance();
-		ShooterMainteneance();
+		Maintenance();
+		ShooterMaintenance();
 	}	
 }
 void object::CubeCreate()
@@ -46,7 +46,7 @@ void object::CubeCreate()
 		wait(1);
 	}
 	grab();
-	Mainteneance();
+	Maintenance();
 	if(radar(PowerCell) == null)
 	{
 		PowerCellCreate();
@@ -96,7 +96,7 @@ void object::ShooterCreate(object shooter)
 	goto(botFactory);
 	drop();
 	factory(shooter.category);
-	Mainteneance();
+	Maintenance();
 	goto(cell.position);
 	grab();
 	goto(GetFactoryFront(botFactory));
@@ -107,7 +107,7 @@ void object::ShooterCreate(object shooter)
 	}
 	drop();
 	goto(space(botFactory.position));
-	Mainteneance();
+	Maintenance();
 }
 point object::GetFactoryFront(object botFactory) // returns a point in front of the BotFactory, grabber goes there instead of the building itself, preventing issues with constantly bumping into it (or the bot inside it) or clipping trough the building's gate since it's not a solid object, huge thanks to tomaszkax86 for providing a solution 
 {
@@ -119,7 +119,7 @@ point object::GetFactoryFront(object botFactory) // returns a point in front of 
 		
 	return factoryFront;
 }
-void object::Mainteneance()
+void object::Maintenance()
 {
 	int list[], i;
 	object power,repair;
@@ -167,14 +167,14 @@ void object::Mainteneance()
 	}
 	else if (energyCell.energyLevel < 0.4 && canbuild(PowerStation) == false && canbuild(PowerCaptor) == false) //can't do canbuild(list), it expects a int value (not list) or category name
 	{
-		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+		message("Power Station/Captor not accessible in this mission.", DisplayWarning);
 	}
 	
 	repair = radar(RepairCenter);
 	
 	if(shieldLevel < 0.5)
 	{
-		message("Structural integritty low, going to Repair Center", DisplayInfo);
+		message("Structural integrity low, going to Repair Center", DisplayInfo);
 		goto(repair.position);
 		while(shieldLevel < 1)
 		{
@@ -187,12 +187,12 @@ void object::Mainteneance()
 	}
 	else if (shieldLevel < 0.5 && canbuild(repair.category) == false)
 	{
-		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+		message("Power Station/Captor not accessible in this mission.", DisplayWarning);
 	}
 	
 	errmode(1);
 }
-void object::ShooterMainteneance()
+void object::ShooterMaintenance()
 {
 	int shooterList[];
 	shooterList[0] = WingedShooter;

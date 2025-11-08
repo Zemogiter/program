@@ -38,7 +38,7 @@ extern void object::DeadBatteryReplacer()
 	{
 		drop();
 	}
-	for(int i = 0; i <= sizeof(subList); i++) // secondary loop, handling Subbers separatly to make sure we dont accidetally pick ones that are underwater
+	for(int i = 0; i <= sizeof(subList); i++) // secondary loop, handling Subber bots separately to make sure we don't accidentally pick ones that are underwater
 	{
 		object battery = BatteryCheck();
 		
@@ -244,7 +244,7 @@ object object::BatteryCheck()
 	list[j++] = NuclearCell;
 	object battery = radar(list);
 	
-	if (battery != null && battery.energyLevel < 1 && battery.category == PowerCell or (battery != null && battery.category == NuclearCell && battery.energyLevel < 0.01)) //if the first found battery is not full and its rechargable (or its a empty Nuclear Cell, find the cell that is full 
+	if (battery != null && battery.energyLevel < 1 && battery.category == PowerCell or (battery != null && battery.category == NuclearCell && battery.energyLevel < 0.01)) //if the first found battery is not full and its rechargeable (or its a empty Nuclear Cell, find the cell that is full 
 	{
 		object[] batteryList = radarall(list);
 		for(int i = 0; i < sizeof(batteryList); ++i)

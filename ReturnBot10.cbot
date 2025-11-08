@@ -1,4 +1,4 @@
-extern void object::ReturnBot10() //program made for 2nd mission in the "Back to Opheron" chapter, makes bots do stuff while being mindfull of the storms
+extern void object::ReturnBot10() //program made for 2nd mission in the 8 chapter, makes bots do stuff while being mindful of the storms
 {
 	object tSpot = radar(TitaniumSpot);
 	object uSpot = radar(UraniumSpot);
@@ -129,7 +129,7 @@ point object::CalculateMidpoint(point pos)
 boolean object::LOS(object objTarget, float fltDist)
 {
 	if(objTarget == null) return false;    //if it doesn't exist you can't see it
-	ipf(10000);                            //Zip through the code AFAP
+	ipf(10000);                            //Zip through the code ASAP
 	point pntCheck;
 	point pntScale;
 	point pntHigh;

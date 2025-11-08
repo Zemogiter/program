@@ -25,7 +25,7 @@ extern void object::CubesToSpots()
 	
 	for(int i = 0; i <= sizeof(spotList2); i++)
 	{
-		Mainteneance(triggerValue);
+		Maintenance(triggerValue);
 		object spot = SelectNextSpot(spotList2);
 		
 		if(spot == null)
@@ -110,7 +110,7 @@ object object::SelectNextSpot(object[] spotList)
 	}
 	return null;
 }
-void object::Mainteneance(float triggerValue)
+void object::Maintenance(float triggerValue)
 {
 	errmode(0);
 	
@@ -192,7 +192,7 @@ void object::Mainteneance(float triggerValue)
 	if(power != null && energyCell.energyLevel < triggerValue && energyCell.category != NuclearCell)
 	{
 		message("CollectTitanium4() - " + this.category + " " + this.id + " " + " - Battery low, going to the recharge facility");
-		if(search(Any,power.position,0,2,1,FilterOnlyLanding | FilterFriendly) != null) //if there is a object (most likey another bot) on the recharge facility
+		if(search(Any,power.position,0,2,1,FilterOnlyLanding | FilterFriendly) != null) //if there is a object (most likely another bot) on the recharge facility
 		{
 			message("CollectTitanium4() - " + this.category + " " + this.id + " " + " - Something is close to the recharge facility, going to the nearby location to avoid potential collisions.");
 			trygoto(space(power.position));
@@ -209,7 +209,7 @@ void object::Mainteneance(float triggerValue)
 	}
 	else if (energyCell.energyLevel < triggerValue && canbuild(PowerStation) == false && canbuild(PowerCaptor) == false && energyCell.category == PowerCell) //can't do canbuild(list), it expects a int value (not list) or category name
 	{
-		message("CollectTitanium4() - " + this.category + " " + this.id + " " + " - Power Station/Captor not accesible in this mission.", DisplayWarning);
+		message("CollectTitanium4() - " + this.category + " " + this.id + " " + " - Power Station/Captor not accessible in this mission.", DisplayWarning);
 	}
 	
 	//integrity check
@@ -222,7 +222,7 @@ void object::Mainteneance(float triggerValue)
 	
 	if(repair != null && shieldLevel < 0.5)
 	{
-		message("CollectRawResources() - " + this.category + " " + this.id + " " + " - Structural integritty low, going to Repair Center", DisplayInfo);
+		message("CollectRawResources() - " + this.category + " " + this.id + " " + " - Structural integrity low, going to Repair Center", DisplayInfo);
 		trygoto(repair.position);
 		while(shieldLevel < 1)
 		{
@@ -235,7 +235,7 @@ void object::Mainteneance(float triggerValue)
 	}
 	else if (shieldLevel < 0.5 && canbuild(RepairCenter) == false && repair == null)
 	{
-		message("CollectRawResources() - " + this.category + " " + this.id + " " + " - Power Station/Captor not accesible in this mission.", DisplayWarning);
+		message("CollectRawResources() - " + this.category + " " + this.id + " " + " - Power Station/Captor not accessible in this mission.", DisplayWarning);
 	}
 	
 	errmode(1);

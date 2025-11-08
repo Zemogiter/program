@@ -1,7 +1,7 @@
 extern void object::BuilderBotAutomation() //simple builder bot program, checks a list of buildings against what exist on the map and acts accordingly
 {
 	bool stayCloseToBase = true; //change accordingly
-	bool countinousMode = true; //builder will automaticaly try to make the next building on the list
+	bool continuousMode = true; //builder will automatically try to make the next building on the list
 	object center = radar(SpaceShip); //change accordingly
 	float distanceToCube = 10; //how far from the center of the base (i.e. SpaceShip) should the cube be?
 	float triggerValue = 0.4; //if battery is below this level, we will try to recharge
@@ -66,7 +66,7 @@ extern void object::BuilderBotAutomation() //simple builder bot program, checks 
 	{
 		buildList[i++] = Derrick;
 	}
-	if (radar(cat) != null) //if there are no aliens, RepairCenter dosen't make much sense
+	if (radar(cat) != null) //if there are no aliens, RepairCenter doesn't make much sense
 	{
 		buildList[i++] = RepairCenter;
 	} 
@@ -131,7 +131,7 @@ extern void object::BuilderBotAutomation() //simple builder bot program, checks 
 			}
 			errmode(1);
 		}
-		if (countinousMode == false)
+		if (continuousMode == false)
 		{
 			break;
 		}
@@ -165,14 +165,14 @@ void object::Maintenance(float triggerValue)
 	}
 	else if (energyCell.energyLevel < triggerValue and canbuild(PowerStation) == false && canbuild(PowerCaptor) == false) //can't do canbuild(list), it expects a int value (not list) or category name
 	{
-		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+		message("Power Station/Captor not accessible in this mission.", DisplayWarning);
 	}
 	
 	repair = radar(RepairCenter);
 	
 	if(shieldLevel < triggerValue)
 	{
-		message("Structural integritty low, going to Repair Center", DisplayInfo);
+		message("Structural integrity low, going to Repair Center", DisplayInfo);
 		goto(repair.position);
 		while(shieldLevel < 1)
 		{
@@ -200,7 +200,7 @@ point object::GetFarCube(object center, float distanceToCube)
 	{
 		if (i == sizeof(cubeList))
 		{
-			message("No Titanium cubes sufficently far away from " + center.category + ", halting program", DisplayWarning);
+			message("No Titanium cubes sufficiently far away from " + center.category + ", halting program", DisplayWarning);
 			break;
 		}
 		if (distance(center.position, cubeList[i].position) >= distanceToCube && BusyCubeCheck(cubeList[i]) == true)
@@ -237,7 +237,7 @@ bool object::BusyCubeCheck(object cube) //checks if a cube is inside a building 
 	}
 	else
 	{
-		converterCheck == true;
+		converterCheck = true;
 	}
 	
 	if (botFactoryList != null)
@@ -261,7 +261,7 @@ bool object::BusyCubeCheck(object cube) //checks if a cube is inside a building 
 	
 	if (converterCheck == true && botFactoryCheck == true)
 	{
-		message("Found a cube that is far enough from the base center.");
+		message("Found a cube that is far enough from the base center and not inside any buildings.");
 		return true;
 	}
 	return false; 

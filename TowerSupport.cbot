@@ -3,7 +3,7 @@ extern void object::TowerSupport()
 	bool manufactureCells = false; //set to true if you want the bot to also create new PowerCells if it finds none
 	float triggerValue = 0.3; //Defense Towers at this power level will be taken care of (if they have PowerCells), also tells the bot to recharge itself
 	bool lookforcells = false;
-	int crashMode = -1; //changes the way bot reacts on colision with another object, may disable path-finding. -1 is the default. Check the list above the trygoto() function to see what options are available
+	int crashMode = -1; //changes the way bot reacts on collision with another object, may disable path-finding. -1 is the default. Check the list above the trygoto() function to see what options are available
 	
 	object[] towerList = radarall(DefenseTower);
 	int[] powerList;
@@ -46,7 +46,7 @@ extern void object::TowerSupport()
 					goto(towerList[i].position);
 					drop();
 					goto(space());
-					Mainteneance(lookforcells, triggerValue, crashMode);
+					Maintenance(lookforcells, triggerValue, crashMode);
 				}
 				else if(facility != null && cell != null && distance(position,facility.position) > distance(position,cell.position)) //recharge building exists but power cell is closer
 				{
@@ -66,7 +66,7 @@ extern void object::TowerSupport()
 					goto(towerList[i].position);
 					drop();
 					goto(space());
-					Mainteneance(lookforcells, triggerValue, crashMode);
+					Maintenance(lookforcells, triggerValue, crashMode);
 				}
 				else if(facility == null && cell != null) //no recharge building, will use power cells on the ground
 				{
@@ -78,7 +78,7 @@ extern void object::TowerSupport()
 					goto(towerList[i].position);
 					drop();
 					goto(space());
-					Mainteneance(true, triggerValue, crashMode);
+					Maintenance(true, triggerValue, crashMode);
 				}
 				else if (cell == null && facility != null) //no cells on the ground, will use PowerStation/Captor
 				{
@@ -91,7 +91,7 @@ extern void object::TowerSupport()
 					goto(towerList[i].position);
 					drop();
 					goto(space());
-					Mainteneance(false, triggerValue, crashMode);
+					Maintenance(false, triggerValue, crashMode);
 				}
 				else //rare case, user should enable cell production
 				{
@@ -130,7 +130,7 @@ extern void object::TowerSupport()
 					goto(towerList[i].position);
 					drop();
 					goto(space());
-					Mainteneance(lookforcells, triggerValue, crashMode);
+					Maintenance(lookforcells, triggerValue, crashMode);
 				}
 			}
 		}
@@ -157,7 +157,7 @@ void object::CellProduction(int[] cellList, bool manufactureCells)
 		drop();
 	}
 }
-void object::Mainteneance(bool lookforcells, float triggerValue, int crashMode)
+void object::Maintenance(bool lookforcells, float triggerValue, int crashMode)
 {
 	int list[], i;
 	object power,repair;
@@ -193,7 +193,7 @@ void object::Mainteneance(bool lookforcells, float triggerValue, int crashMode)
 	if(power != null && energyCell.energyLevel < triggerValue && energyCell.category != NuclearCell)
 	{
 		message("CollectTitanium4() - " + this.category + " " + this.id + " " + "Battery low, going to recharge facility", DisplayInfo);
-		if(search(Any,power.position,0,3,1,FilterOnlyLanding) != null) //if there is a object (most likey another bot) on the recharge facility
+		if(search(Any,power.position,0,3,1,FilterOnlyLanding) != null) //if there is a object (most likely another bot) on the recharge facility
 		{
 			trygoto(space(power.position),crashMode);
 		}
@@ -209,7 +209,7 @@ void object::Mainteneance(bool lookforcells, float triggerValue, int crashMode)
 	}
 	else if (energyCell.energyLevel < triggerValue && canbuild(PowerStation) == false && canbuild(PowerCaptor) == false && energyCell.category == PowerCell) //can't do canbuild(list), it expects a int value (not list) or category name
 	{
-		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+		message("Power Station/Captor not accessible in this mission.", DisplayWarning);
 	}
 	
 	repair = radar(RepairCenter);
@@ -220,7 +220,7 @@ void object::Mainteneance(bool lookforcells, float triggerValue, int crashMode)
 	
 	if(shieldLevel < 0.5)
 	{
-		message("CollectTitanium4() - " + this.category + " " + this.id + " " + "Structural integritty low, going to Repair Center", DisplayInfo);
+		message("CollectTitanium4() - " + this.category + " " + this.id + " " + "Structural integrity low, going to Repair Center", DisplayInfo);
 		trygoto(repair.position, crashMode);
 		while(shieldLevel < 1)
 		{
@@ -233,7 +233,7 @@ void object::Mainteneance(bool lookforcells, float triggerValue, int crashMode)
 	}
 	else if (shieldLevel < 0.5 && canbuild(repair.category) == false)
 	{
-		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+		message("Power Station/Captor not accessible in this mission.", DisplayWarning);
 	}
 	
 	errmode(1);
@@ -313,7 +313,7 @@ void object::CollisionPrevention()
 		}
 		else
 		{
-			message("DEBUG - object dirrectly ahead");
+			message("DEBUG - object directly ahead");
 			point midPoint;
 			midPoint.x = ((position.x + blockObject.position.x) / 2);
 			midPoint.y = ((position.y + blockObject.position.y) / 2);

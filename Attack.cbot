@@ -113,7 +113,7 @@ extern void object::Attack()
 		}
 		if(dis > 40)
 		{
-			maint();
+			Maintenance();
 		}
 		if((target = radar(cat)) == null)
 		{
@@ -122,7 +122,7 @@ extern void object::Attack()
 	}
 }
 
-void object::maint()
+void object::Maintenance()
 {
 	if(energyCell.energyLevel < 0.35 && energyCell.category != NuclearCell)
 	{
@@ -183,7 +183,7 @@ void object::maint()
 boolean object::LOS(object objTarget, float fltDist)
 {
 	if(objTarget == null) return false;    //if it doesn't exist you can't see it
-	ipf(10000);                            //Zip through the code AFAP
+	ipf(10000);                            //Zip through the code ASAP
 	point pntCheck;
 	point pntScale;
 	point pntHigh;
@@ -356,7 +356,7 @@ void object::newgoto(point p){
 	jet(-0.3);
 	while((this.position.z-topo(this.position))>0);
 	jet(0);
-	 }
+}
 void object::Return()
 {
 	object base = radar(SpaceShip);

@@ -17,14 +17,14 @@ extern void object::ReturnBot9B() //Part two, tells grabber to wait until the ex
 		{
 			wait(1);
 		}
-		point uran;
-		uran.x = receive("PosX",100);
-		uran.y = receive("PosY",100);
-		uran.z = receive("PosZ",100);
+		point ore;
+		ore.x = receive("PosX",100);
+		ore.y = receive("PosY",100);
+		ore.z = receive("PosZ",100);
 		deleteinfo("PosX",100);
 		deleteinfo("PosY",100);
 		deleteinfo("PosZ",100);
-		goto(uran);
+		goto(ore);
 		grab();
 		goto(atomic.position);
 		drop();

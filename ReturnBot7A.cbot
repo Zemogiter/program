@@ -1,4 +1,4 @@
-extern void object::ReturnBot7A() //a program for the subber, allows it to support the construction crew(TrackedBuilder, TrackedGrabber and TrackedShooter) on 1st mission on crystalium
+extern void object::ReturnBot7A() //a program for the subber, allows it to support the construction crew(TrackedBuilder, TrackedGrabber and TrackedShooter) on 1st mission on Crystalium
 {
 	object builder = radar(TrackedBuilder);
 	if (builder != null) // program needs TrackedBuilder, otherwise it makes no sense

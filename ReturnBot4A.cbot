@@ -1,4 +1,4 @@
-extern void object::ReturnBot4A() //another proram for ReturnBot Mission 2-2, grabs uranium from Derrick and moves it until we have 3 on board
+extern void object::ReturnBot4A() //another program for ReturnBot Mission 2-2, grabs uranium from Derrick and moves it until we have 3 on board
 {
 	object derrick = radar(Derrick);
 	object ship = radar(SpaceShip);
@@ -10,7 +10,7 @@ extern void object::ReturnBot4A() //another proram for ReturnBot Mission 2-2, gr
 	
 	while (CountUranium(ship) != 3)
 	{
-		Mainteneance(true,0.4);
+		Maintenance(true,0.4);
 		goto(derrick.position);
 		grab();
 		goto(space(ship.position,2,8,4)); //watch this space!
@@ -39,7 +39,7 @@ int object::CountUranium(object ship)
 	}
 	return sizeof(cubeAtShipList);
 }
-void object::Mainteneance(bool lookforcells, float triggerValue)
+void object::Maintenance(bool lookforcells, float triggerValue)
 {
 	int list[], i;
 	object power,repair;
@@ -87,14 +87,14 @@ void object::Mainteneance(bool lookforcells, float triggerValue)
 	}
 	else if (energyCell.energyLevel < triggerValue && canbuild(PowerStation) == false && canbuild(PowerCaptor) == false) //can't do canbuild(list), it expects a int value (not list) or category name
 	{
-		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+		message("Power Station/Captor not accessible in this mission.", DisplayWarning);
 	}
 	
 	repair = radar(RepairCenter);
 	
 	if(shieldLevel < 0.5)
 	{
-		message("Structural integritty low, going to Repair Center", DisplayInfo);
+		message("Structural integrity low, going to Repair Center", DisplayInfo);
 		goto(repair.position);
 		while(shieldLevel < 1)
 		{
@@ -107,7 +107,7 @@ void object::Mainteneance(bool lookforcells, float triggerValue)
 	}
 	else if (shieldLevel < 0.5 && canbuild(repair.category) == false)
 	{
-		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+		message("Power Station/Captor not accessible in this mission.", DisplayWarning);
 	}
 	
 	errmode(1);
