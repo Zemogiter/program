@@ -1,6 +1,6 @@
 extern void object::DeadBatteryCharger()
 {
-	int deliveryMode = 2; //0 = deliver battery to the position grabber was at program activation, 1 = put it near the PowerStation/Captor, 2 = go where the PowerCell was before recharge, 3 = go to base, define what is considerd a base object in the variable below
+	int deliveryMode = 3; //0 = deliver battery to the position grabber was at program activation, 1 = put it near the PowerStation/Captor, 2 = go where the PowerCell was before recharge, 3 = go to base, define what is considered a base object in the variable below
 	object baseObject = radar(SpaceShip);
 	
 	object[] batteryList = radarall(PowerCell);
@@ -111,7 +111,7 @@ void object::DeliverPowerCell(int deliveryMode, point botOrgPosition, object sta
 	{
 		if(baseObject.category == SpaceShip)
 		{
-			goto(space(baseObject.position,0,10));
+			goto(flatspace(baseObject.position,2));
 		}
 		else
 		{
