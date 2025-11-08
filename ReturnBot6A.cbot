@@ -43,3 +43,54 @@ extern void object::ReturnBot6() //a script for the builder, goes to coordinates
 		build(PowerCaptor);
 		Maintenance(0.2);
 }
+void object::Maintenance(float triggerValue)
+{
+	int list[], i;
+	object power,repair;
+	
+	i = 0;
+	list[i++] = PowerStation;
+	list[i++] = PowerCaptor;
+	errmode(0);
+	power = radar(list);
+	
+	if(energyCell.energyLevel < triggerValue && energyCell.category != NuclearCell)
+	{
+		message("Battery low, going to recharge facility", DisplayInfo);
+		goto(power.position);
+		while(energyCell.energyLevel < 1)
+		{
+			wait(1);
+		}
+	}
+	else if (energyCell.energyLevel < triggerValue and power == null and energyCell.category == PowerCell) //checking if we have power cell so that we wont display this error needlessly
+	{
+		message("Power Station/Captor not found.", DisplayError);
+	}
+	else if (energyCell.energyLevel < triggerValue and canbuild(PowerStation) == false && canbuild(PowerCaptor) == false) //can't do canbuild(list), it expects a int value (not list) or category name
+	{
+		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+	}
+	
+	repair = radar(RepairCenter);
+	
+	if(shieldLevel < triggerValue)
+	{
+		message("Structural integritty low, going to Repair Center", DisplayInfo);
+		goto(repair.position);
+		while(shieldLevel < 1)
+		{
+			wait(1);
+		}
+	}
+	else if (shieldLevel < triggerValue and repair == null)
+	{
+		message("Repair Center not found.", DisplayError);
+	}
+	else if (shieldLevel < triggerValue and canbuild(repair.category) == false)
+	{
+		message("Repair Center not accesible in this mission.", DisplayWarning);
+	}
+	
+	errmode(1);
+}
