@@ -6,27 +6,25 @@ extern void object::Defend()
 	cat[2] = AlienWasp; 
 	cat[3] = AlienSpider;
 	
-	int parimeterToScan = 50;      // adjust value to look farther if needed 
+	int perimeterToScan = 50;      // adjust value to look farther if needed 
 	point campSpot = position;     // position/spot to defend (default origin)
 	int maxDistFromCampSpot = 15;  // patrol radius
-	float shieldTreshold = 0.6; // at this shield level, bot will go to Repair Station
 	
 	object enemy;
 	
 	while(true)
 	{
-		enemy = radar(cat,0,360,0,parimeterToScan);
+		enemy = radar(cat,0,360,0,perimeterToScan);
 		if(enemy == null) // if no enemy around, do the maintenance procedure
 		{
-			basicMaintE();
-			basicMaintS(shieldTreshold);
+			Maintenance()
 		}
 		else
 		{
 			moveAndDestroy(enemy); // otherwise attack
 		}
 		
-		enemy = radar(cat,0,360,0,parimeterToScan);     // between recharging, enemy spotted?
+		enemy = radar(cat,0,360,0,perimeterToScan);     // between recharging, enemy spotted?
 		if(enemy == null)                                     // if no further enemies around, move back into position
 		{
 			getBackToPosition(campSpot,maxDistFromCampSpot);
@@ -38,25 +36,43 @@ extern void object::Defend()
 	}
 }
 
-void object::basicMaintE()                             // basic energy maintenance
+void object::Maintenance()
 {
-	if(energyCell.energyLevel < 0.5)                   // adjust energy tolerance here
+	if(energyCell.energyLevel < 0.35 && energyCell.category != NuclearCell)
 	{
-		object power; 
-		if( (power = radar(PowerStation)) != null )    // if there is a powerstation
+		int list[], i;
+		object power,repair;
+		
+		i = 0;
+		list[i++] = PowerStation;
+		list[i++] = PowerCaptor;
+		
+		errmode(0);
+		
+		power = radar(list);
+		
+		if(power != null)
 		{
-			goto(power.position);                      // go there
-			while(energyCell.energyLevel < 1)          // and fill up
+			goto(power.position,5);
+			
+			while(energyCell.energyLevel < 1)
+			    wait(1);
+		}
+		else
+		{
+			object base = radar(BotFactory);
+			message("No recharge facility found, going to the base for power cell replacement.", DisplayWarning);
+			goto(base.position);
+			message("Reached the base, waiting for new power cell");
+			float powerAtArrival = energyCell.energyLevel;
+			while(energyCell.energyLevel <= powerAtArrival)
 			{
 				wait(1);
-			} 
+			}
 		}
 	}
-}  
-
-void object::basicMaintS(float shieldTreshold)                             // basic shield maintenance
-{
-	if(shieldLevel <= shieldTreshold)                              // adjust shield tolerance here
+	
+	if(shieldLevel < 0.45)
 	{
 		object rep = radar(RepairCenter);
 		object bot = radar(Shielder);
@@ -78,11 +94,11 @@ void object::basicMaintS(float shieldTreshold)                             // ba
 	}
 }
 
-void object::getBackToPosition(point pos, int parimeter)
+void object::getBackToPosition(point pos, int perimeter)
 { 
 	float dis = distance(position,pos);
 	
-	if(dis > parimeter)                  // if outside of patrol radius
+	if(dis > perimeter)                  // if outside of patrol radius
 	{
 		float dif = pos.z-position.z;
 		float ang = asin(dif/dis);
@@ -97,7 +113,7 @@ void object::getBackToPosition(point pos, int parimeter)
 	else
 	{
 		motor(0,0);                      // otherwise camp
-		if(topo(position) > 0)           // if groundlevel is above water
+		if(topo(position) > 0)           // if ground level is above water
 		{
 			jet(-1);                     // then it's safe to land
 		}        
@@ -115,7 +131,7 @@ void object::moveAndDestroy(object target)
 	dif = target.position.z-position.z;
 	ang = asin(dif/dis);
 	
-	jet(1-(ang/-20));                         // thrust until 20 degress above target
+	jet(1-(ang/-20));                         // thrust until 20 degrees above target
 	
 	dir = direction(target.position); 
 	
@@ -138,7 +154,7 @@ void object::moveAndDestroy(object target)
 boolean object::LOS(object objTarget, float fltDist)
 {
 	if(objTarget == null) return false;    //if it doesn't exist you can't see it
-	ipf(10000);                            //Zip through the code AFAP
+	ipf(10000);                            //Zip through the code ASAP
 	point pntCheck;
 	point pntScale;
 	point pntHigh;
