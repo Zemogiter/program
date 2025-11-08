@@ -1,6 +1,8 @@
 extern void object::ReturnBot6() //a script for the builder, goes to coordinates relayed by the grabber and constructs power facilities
 {
 	object ship = radar(SpaceShip);
+	point placedCube;
+	
 	goto(ship.position);
 	
 	while (testinfo("placedCubeX",20) == false)
@@ -8,40 +10,40 @@ extern void object::ReturnBot6() //a script for the builder, goes to coordinates
 		wait(1);
 	}
 	message("Builder - Loading information from Exchange Post.");
-		
-		placedCube.x = receive("placedCubeX",20);
-		placedCube.y = receive("placedCubeY",20);
-		placedCube.z = receive("placedCubeZ",20);
-		
-		message("Builder - Removing original information for the grabber.");
-		deleteinfo("placedCubeX",20);
-		deleteinfo("placedCubeY",20);
-		deleteinfo("placedCubeZ",20);
-		message("Builder - Going to the placed cube to construct PowerStation.");
-		goto(placedCube);
-		build(PowerCaptor);
-		Maintenance(0.2);
-		message("Builder - Returning to spaceship to wait for further instructions.");
-		goto(ship.position);
-		//second PowerCaptor
-		while (testinfo("placedCubeX",20) == false)
-		{
-			wait(1);
-		}
-		message("Builder - Second PowerCaptor - Loading information from Exchange Post.");
-		
-		placedCube.x = receive("placedCubeX",20);
-		placedCube.y = receive("placedCubeY",20);
-		placedCube.z = receive("placedCubeZ",20);
-		
-		message("Builder - Removing original information for the grabber.");
-		deleteinfo("placedCubeX",20);
-		deleteinfo("placedCubeY",20);
-		deleteinfo("placedCubeZ",20);
-		message("Builder - Going to the placed cube to construct PowerPlant.");
-		goto(placedCube);
-		build(PowerCaptor);
-		Maintenance(0.2);
+	
+	placedCube.x = receive("placedCubeX",20);
+	placedCube.y = receive("placedCubeY",20);
+	placedCube.z = receive("placedCubeZ",20);
+	
+	message("Builder - Removing original information for the grabber.");
+	deleteinfo("placedCubeX",20);
+	deleteinfo("placedCubeY",20);
+	deleteinfo("placedCubeZ",20);
+	message("Builder - Going to the placed cube to construct PowerStation.");
+	goto(placedCube);
+	build(PowerStation);
+	Maintenance(0.5);
+	message("Builder - Returning to spaceship to wait for further instructions.");
+	goto(ship.position);
+	//second PowerCaptor
+	while (testinfo("placedCubeX",20) == false)
+	{
+		wait(1);
+	}
+	message("Builder - Second PowerCaptor - Loading information from Exchange Post.");
+	
+	placedCube.x = receive("placedCubeX",20);
+	placedCube.y = receive("placedCubeY",20);
+	placedCube.z = receive("placedCubeZ",20);
+	
+	message("Builder - Removing original information for the grabber.");
+	deleteinfo("placedCubeX",20);
+	deleteinfo("placedCubeY",20);
+	deleteinfo("placedCubeZ",20);
+	message("Builder - Going to the placed cube to construct PowerPlant.");
+	goto(placedCube);
+	build(PowerPlant);
+	Maintenance(0.5);
 }
 void object::Maintenance(float triggerValue)
 {
@@ -69,14 +71,14 @@ void object::Maintenance(float triggerValue)
 	}
 	else if (energyCell.energyLevel < triggerValue and canbuild(PowerStation) == false && canbuild(PowerCaptor) == false) //can't do canbuild(list), it expects a int value (not list) or category name
 	{
-		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+		message("Power Station/Captor not accessible in this mission.", DisplayWarning);
 	}
 	
 	repair = radar(RepairCenter);
 	
 	if(shieldLevel < triggerValue)
 	{
-		message("Structural integritty low, going to Repair Center", DisplayInfo);
+		message("Structural integrity low, going to Repair Center", DisplayInfo);
 		goto(repair.position);
 		while(shieldLevel < 1)
 		{
@@ -89,7 +91,7 @@ void object::Maintenance(float triggerValue)
 	}
 	else if (shieldLevel < triggerValue and canbuild(repair.category) == false)
 	{
-		message("Repair Center not accesible in this mission.", DisplayWarning);
+		message("Repair Center not accessible in this mission.", DisplayWarning);
 	}
 	
 	errmode(1);
