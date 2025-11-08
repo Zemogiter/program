@@ -7,6 +7,37 @@
 	"settings": {
 		"files.associations": {
 			"*.cbot": "cbot"
-		}
+		},
+		"cSpell.words": [
+			"addpoint",
+			"apoint",
+			"canbuild",
+			"colobot",
+			"cutscenes",
+			"deleteinfo",
+			"errmode",
+			"flatground",
+			"flatspace",
+			"hexagonrecursion",
+			"immediat",
+			"isbusy",
+			"melex",
+			"newgoto",
+			"objdirection",
+			"Orga",
+			"Phazer",
+			"pntrotz",
+			"pointdirection",
+			"radarall",
+			"retobject",
+			"retval",
+			"strmid",
+			"Subber",
+			"subpoint",
+			"testinfo",
+			"tomaszkax",
+			"topo",
+			"trygoto"
+		]
 	}
 }
