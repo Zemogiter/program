@@ -1,8 +1,8 @@
 extern void object::ReturnBot2() //a quick and dirty program to prepare resources for Space Ship takeoff
 {
 	object item = radar(PowerCell); //change accordingly
-	bool ignoreShip = true; // have a BlueFlag ready if you set this to true
-	float triggerValue = 0.4; //grabber will go rechare it's Power Cell once it reaches this level
+	bool ignoreShip = false; // have a BlueFlag ready if you set this to true
+	float triggerValue = 0.4; //grabber will go recharge it's Power Cell once it reaches this level
 	bool loadFullCells = false;
 	bool ignoreBaseBuildings = true; //if true, grabber will take resources to the SpaceShip even if they're near the base
 	
@@ -14,7 +14,7 @@ extern void object::ReturnBot2() //a quick and dirty program to prepare resource
 		ship = radar(BlueFlag);
 	}
 	
-	Mainteneance(triggerValue);
+	Maintenance(triggerValue);
 	if(load != null && load.category != item.category)
 	{
 		drop();
@@ -28,7 +28,7 @@ extern void object::ReturnBot2() //a quick and dirty program to prepare resource
 	{
 		TransportToShip(ship,false,itemList, item, triggerValue, ignoreShip, loadFullCells, ignoreBaseBuildings);
 	}
-	Mainteneance(triggerValue);
+	Maintenance(triggerValue);
 }
 void object::TransportToShip(object ship, bool hasItem, object[] itemList, object item, float triggerValue, bool ignoreShip, bool loadFullCells, bool ignoreBaseBuildings)
 {
@@ -36,7 +36,7 @@ void object::TransportToShip(object ship, bool hasItem, object[] itemList, objec
 	{
 		if(i == sizeof(itemList))
 		{
-			message("Finieshed the transportation of " + item.category + " to " + ship.category);
+			message("Finished the transportation of " + item.category + " to " + ship.category);
 			break;
 		}
 		if (itemList[i].category == NuclearCell && itemList[i].energyLevel < 0.01)
@@ -68,7 +68,7 @@ void object::TransportToShip(object ship, bool hasItem, object[] itemList, objec
 				{
 					continue;
 				}
-				Mainteneance(triggerValue);
+				Maintenance(triggerValue);
 				if (hasItem == false)
 				{
 					trygoto(itemList[i].position);
@@ -80,12 +80,8 @@ void object::TransportToShip(object ship, bool hasItem, object[] itemList, objec
 				}
 				else
 				{
-					goto(space(ship.position,0,13));
-				}
-				if (ignoreShip == false)
-				{
-					turn(direction(ship.position));
-					move(3); //watch this space
+					goto(flatspace(ship.position,2,2,10));
+					move(-2);
 				}
 				drop();
 			}
@@ -118,7 +114,7 @@ void object::trygoto(point pos)
 		break;
 	}
 }
-void object::Mainteneance(float triggerValue)
+void object::Maintenance(float triggerValue)
 {
 	errmode(0);
 	
@@ -211,7 +207,7 @@ void object::Mainteneance(float triggerValue)
 	}
 	else if (energyCell.energyLevel < triggerValue && canbuild(PowerStation) == false && canbuild(PowerCaptor) == false && energyCell.category == PowerCell) //can't do canbuild(list), it expects a int value (not list) or category name
 	{
-		message("ReturnBot2() - " + this.category + " " + this.id + " " + " - Power Station/Captor not accesible in this mission.", DisplayWarning);
+		message("ReturnBot2() - " + this.category + " " + this.id + " " + " - Power Station/Captor not accessible in this mission.", DisplayWarning);
 	}
 	
 	//integrity check
@@ -224,7 +220,7 @@ void object::Mainteneance(float triggerValue)
 	
 	if(repair != null && shieldLevel < 0.5)
 	{
-		message("ReturnBot2() - " + this.category + " " + this.id + " " + " - Structural integritty low, going to Repair Center", DisplayInfo);
+		message("ReturnBot2() - " + this.category + " " + this.id + " " + " - Structural integrity low, going to Repair Center", DisplayInfo);
 		trygoto(repair.position);
 		while(shieldLevel < 1)
 		{
@@ -237,7 +233,7 @@ void object::Mainteneance(float triggerValue)
 	}
 	else if (shieldLevel < 0.5 && canbuild(RepairCenter) == false && repair == null)
 	{
-		message("ReturnBot2() - " + this.category + " " + this.id + " " + " - Power Station/Captor not accesible in this mission.", DisplayWarning);
+		message("ReturnBot2() - " + this.category + " " + this.id + " " + " - Power Station/Captor not accessible in this mission.", DisplayWarning);
 	}
 	
 	errmode(1);
