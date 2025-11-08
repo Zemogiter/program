@@ -1,31 +1,203 @@
-extern void object::ReturnBot5() //another quick and dirty piece of code, this one is for the 1st mission on Crystalium. It tells the builder bot to go to the nearest waypoint that has a titanium cube on it and build RadarStation there
+extern void object::ReturnBot6() //code for the mission 5-1 (Volcania), goes to the lava shore and places cubes there for the builder to construct the PowerStation and PowerPlant
 {
-	object waypoint = radar(WayPoint);
-	if (search(Titanium,waypoint.position) != null)
+	object cube, placedCube, ship;
+
+	ship = radar(SpaceShip);
+	//first cube
+	cube = radar(Titanium);
+	goto(cube.position);
+	grab();
+	goto(); //enter coordinates here
+	drop();
+	wait(0.5);
+	placedCube = radar(Titanium,0,45,0,5);
+	message("Grabber - Cube for PowerStation placed, moving to spaceship to relay information.");
+	goto(ship.position);
+	message("Grabber - Sending placed cube coordinates for the builder.");
+	send("placedCubeX", placedCube.position.x,20);
+	send("placedCubeY", placedCube.position.y,20);
+	send("placedCubeZ", placedCube.position.z,20);
+	while (radar(PowerStation) == null)
 	{
-		RadarConstruction(waypoint);
+		wait(1);
 	}
-	else
+	Mainteneance();
+	//second cube
+	cube = radar(Titanium);
+	goto(cube.position);
+	grab();
+	goto(); //enter coordinates here
+	drop();
+	wait(0.5);
+	placedCube = radar(Titanium,0,45,0,5);
+	message("Grabber - Cube for PowerPlant placed, moving to spaceship to relay information.");
+	goto(ship.position);
+	message("Sending placed cube coordinates for the builder.");
+	send("placedCubeX", placedCube.position.x,20);
+	send("placedCubeY", placedCube.position.y,20);
+	send("placedCubeZ", placedCube.position.z,20);
+	Mainteneance();	
+}
+void object::Mainteneance(float triggerValue, int crashMode, bool verboseMode)
+{
+	errmode(0);
+	
+	int list[], cellList[];
+	object power, repair, cell;
+	
+	list[0] = PowerStation;
+	list[1] = PowerCaptor;
+	
+	power = radar(list);
+	
+	cellList[0] = PowerCell;
+	cellList[1] = NuclearCell;
+	
+	cell = radar(cellList);
+	
+	//checking for batteries first, in case they're the only way to recharge a bot or they're more accessible
+	if (this.category != Subber)
 	{
-		object[] waypointList = radarall(WayPoint);
-		for (int i = 0;i <= sizeof(waypointList);i++)
+		//no power facility on the map
+		if (power == null) 
 		{
-			if(i == sizeof(waypointList))
+			if (this.energyCell.energyLevel <= triggerValue && cell.energyLevel >= this.energyCell.energyLevel && cell.energyLevel >= triggerValue && NuclearCellCheck(cell) == true)
 			{
-				message("No waypoints with Titanium cubes on them, halting program.", DisplayError);
-				break;
+				if (cell.category == PowerCell)
+				{
+					message("CollectTitanium4() - " + this.category + " " + this.id + " " + " - No recharge facility found - swapping with better PowerCell.");
+				}
+				else if (cell.category == NuclearCell)
+				{
+					message("CollectTitanium4() - " + this.category + " " + this.id + " " + " - No recharge facility found - swapping with better NuclearCell.");
+				}
+				trygoto(cell.position, crashMode, verboseMode);
+				if (load != null)
+				{
+					turn(90);
+					drop();
+					turn(-90);
+				}
+				grab();
+				drop(Behind);
+				grab(EnergyCell);
+				drop();
+				grab(Behind);
+				drop(EnergyCell);
 			}
-			if(search(Titanium,waypointList[i].position,0,5) != null)
+		}
+		//power facility exists but cell is closer
+		else if (power != null && cell != null && distance(position, cell.position) < distance(position, power.position)) 
+		{
+			if (this.energyCell.energyLevel <= triggerValue && cell.energyLevel >= this.energyCell.energyLevel && cell.energyLevel >= triggerValue && NuclearCellCheck(cell) == true)
 			{
-				waypoint = waypointList[i];
-				RadarConstruction(waypoint);
+				if (cell.category == PowerCell)
+				{
+					message("CollectTitanium4() - " + this.category + " " + this.id + " " + " - Can't reach power facility or a PowerCell is closer.");
+				}
+				else if (cell.category == NuclearCell)
+				{
+					message("CollectTitanium4() - " + this.category + " " + this.id + " " + " - Can't reach power facility or a NuclearCell is closer.");
+				}
+				trygoto(cell.position, crashMode, verboseMode);
+				if (load != null)
+				{
+					turn(90);
+					drop();
+					turn(-90);
+				}
+				grab();
+				drop(Behind);
+				grab(EnergyCell);
+				drop();
+				grab(Behind);
+				drop(EnergyCell);
 			}
 		}
 	}
-}
-void object::RadarConstruction(object waypoint)
-{
-	goto(space(waypoint.position));
-	turn(direction(waypoint.position));
-	build(RadarStation);
+	
+	//going to recharge facility
+	if(power != null && energyCell.energyLevel < triggerValue && energyCell.category != NuclearCell)
+	{
+		message("CollectTitanium4() - " + this.category + " " + this.id + " " + " - Battery low, going to the recharge facility");
+		if(search(Any,power.position,0,2,1,FilterOnlyLanding | FilterFriendly) != null) //if there is a object (most likey another bot) on the recharge facility
+		{
+			if(verboseMode == true)
+			{
+				message("CollectTitanium4() - " + this.category + " " + this.id + " " + " - Something is close to the recharge facility, going to the nearby location to avoid potential collisions.");
+			}
+			trygoto(space(power.position),crashMode, verboseMode);
+		}
+		trygoto(power.position,crashMode, verboseMode);
+		while(energyCell.energyLevel < 1)
+		{
+			wait(1);
+		}
+	}
+	else if (energyCell.energyLevel < triggerValue && power == null && energyCell.category == PowerCell) //checking if we have power cell so that we wont display this error needlessly
+	{
+		message("CollectTitanium4() - " + this.category + " " + this.id + " " + " - Power Station/Captor not found.", DisplayError);
+		trygoto(cell.position, crashMode, verboseMode);
+		
+		if (load != null)
+		{
+			turn(90);
+			drop();
+			turn(-90);
+		}
+		
+		grab();
+		drop(Behind);
+		grab(EnergyCell);
+		drop();
+		grab(Behind);
+		drop(EnergyCell);
+	}
+	else if (energyCell.energyLevel < triggerValue && canbuild(PowerStation) == false && canbuild(PowerCaptor) == false && energyCell.category == PowerCell) //can't do canbuild(list), it expects a int value (not list) or category name
+	{
+		message("CollectTitanium4() - " + this.category + " " + this.id + " " + " - Power Station/Captor not accesible in this mission.", DisplayWarning);
+		trygoto(cell.position, crashMode, verboseMode);
+		
+		if (load != null)
+		{
+			turn(90);
+			drop();
+			turn(-90);
+		}
+		
+		grab();
+		drop(Behind);
+		grab(EnergyCell);
+		drop();
+		grab(Behind);
+		drop(EnergyCell);
+	}
+	
+	//integrity check
+	int repairList[];
+	
+	repairList[0] = RepairCenter;
+	repairList[1] = Shielder;
+	
+	repair = radar(repairList);
+	
+	if(repair != null && shieldLevel < 0.5)
+	{
+		message("CollectRawResources() - " + this.category + " " + this.id + " " + " - Structural integritty low, going to Repair Center", DisplayInfo);
+		trygoto(repair.position, crashMode, verboseMode);
+		while(shieldLevel < 1)
+		{
+			wait(1);
+		}
+	}
+	else if (shieldLevel < 0.5 && repair == null)
+	{
+		message("CollectRawResources() - " + this.category + " " + this.id + " " + " - Power Station/Captor not found.", DisplayError);
+	}
+	else if (shieldLevel < 0.5 && canbuild(RepairCenter) == false && repair == null)
+	{
+		message("CollectRawResources() - " + this.category + " " + this.id + " " + " - Power Station/Captor not accesible in this mission.", DisplayWarning);
+	}
+	
+	errmode(1);
 }
