@@ -1,38 +1,40 @@
-extern void object::MoveFromShip() //a program that moves resources from ship to location within ajustable distance from it
+extern void object::MoveCubesForBuilder() //a program that moves Titanium cubes for construction
 {
-	object resource = radar(Titanium); // change accordingly
-	float dist = 40; // how far away from the ship should we look for resources to transport to the base
-	//variable below are used in maintnenance of the bot executing this program
-	bool lookAtConverter = true; //if true, grabber will look at converter instead of space ship for resources to move
-	bool lookforcells = false;
-	float triggerValue = 0.3;
+	float dist = 40; // how far away should we look (this will be the distance between the cube and a given object)
+	float triggerValue = 0.3; //grabber will enter maintenance mode if power/shield levels reach this number
 	
 	object base = radar(SpaceShip);
-	if (lookAtConverter == true)
-	{
-		base = radar(Converter);
-	}
-	int resourceToTake = resource.category;
+	object converter = radar(Converter);
+	object resource = radar(Titanium);
 	
-	for(int i = 0;i <= CountCubesAtShip(base,dist,resourceToTake);i++)
+	if (base == null)
 	{
-		object resourceAtShip = search(resourceToTake,base.position,0,dist);
+		base = radar(BlueFlag);
+	}
+	
+	for(int i = 0;i == sizeof(radarall(Titanium));i++)
+	{
+		Maintenance(triggerValue);
 		
-		Mainteneance(lookforcells, triggerValue);
-		if(load != null && load.category == resourceToTake)
+		if (load != null && load.category == Titanium) //grabber already has the cube
 		{
-			message("Bot has the desired item already, going straight to the base.");
-			goto(space(base.position, dist));
+			message("Bot has the desired item already, placing it.");
+			while(distance(position,base.position) < dist && distance(position,converter.position) < dist)
+			{
+				goto(space());
+			}
 			drop();
 		}
-		else if(load != null && load.category != resourceToTake)
+		else if (load != null && load.category != Titanium)
 		{
 			goto(space());
 			drop();
 		}
-		goto(resourceAtShip.position);
+		
+		goto(resource.position);
 		grab();
-		if(load != null and load.category != resourceToTake) //if grabber has a incorrect item
+		
+		if(load != null and load.category != Titanium) //if grabber has a incorrect item
 		{
 			message("Grabber picked up the wrong item, correcting.");
 			
@@ -44,8 +46,12 @@ extern void object::MoveFromShip() //a program that moves resources from ship to
 				grab();
 			}
 		}
-		Mainteneance(lookforcells, triggerValue);
-		goto(space(base.position,dist));
+		
+		Maintenance(triggerValue);
+		while(distance(position,base.position) < dist && distance(position,converter.position) < dist)
+		{
+			goto(space());
+		}
 		drop();
 		goto(space());
 	}
@@ -73,7 +79,7 @@ int object::CountCubesAtShip(object base, float dist, int resourceToTake)
 	}
 	return sizeof(cubeAtShipList);
 }
-void object::Mainteneance(bool lookforcells, float triggerValue)
+void object::Maintenance(float triggerValue)
 {
 	int list[], i;
 	object power,repair;
@@ -86,7 +92,7 @@ void object::Mainteneance(bool lookforcells, float triggerValue)
 	
 	power = radar(list);
 	
-	if(power == null && lookforcells == true && this.category != Subber)
+	if(power == null && this.category != Subber)
 	{
 		int cellList[];
 		cellList[0] = PowerCell;
@@ -121,14 +127,14 @@ void object::Mainteneance(bool lookforcells, float triggerValue)
 	}
 	else if (energyCell.energyLevel < triggerValue && canbuild(PowerStation) == false && canbuild(PowerCaptor) == false) //can't do canbuild(list), it expects a int value (not list) or category name
 	{
-		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+		message("Power Station/Captor not accessible in this mission.", DisplayWarning);
 	}
 	
 	repair = radar(RepairCenter);
 	
 	if(shieldLevel < 0.5)
 	{
-		message("Structural integritty low, going to Repair Center", DisplayInfo);
+		message("Structural integrity low, going to Repair Center", DisplayInfo);
 		goto(repair.position);
 		while(shieldLevel < 1)
 		{
@@ -141,7 +147,7 @@ void object::Mainteneance(bool lookforcells, float triggerValue)
 	}
 	else if (shieldLevel < 0.5 && canbuild(repair.category) == false)
 	{
-		message("Power Station/Captor not accesible in this mission.", DisplayWarning);
+		message("Power Station/Captor not accessible in this mission.", DisplayWarning);
 	}
 	
 	errmode(1);
