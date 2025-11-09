@@ -285,7 +285,7 @@ void object::OldBatteryHandler(bool rechargeOldBattery)
 		if (power != null)
 		{
 			message("Power Station found, moving there");
-			goto(power.position);
+			trygoto(power.position);
 			while (load.energyLevel < 1)
 			{
 				wait(1);
