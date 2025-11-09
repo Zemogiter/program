@@ -12,7 +12,7 @@ extern void object::MoveCubesForBuilder() //a program that moves Titanium cubes 
 		base = radar(BlueFlag);
 	}
 	
-	for(int i = 0;i == sizeof(radarall(Titanium));i++)
+	for(int i = 0;i < sizeof(radarall(Titanium));i++)
 	{
 		Maintenance(triggerValue);
 		
@@ -48,36 +48,23 @@ extern void object::MoveCubesForBuilder() //a program that moves Titanium cubes 
 		}
 		
 		Maintenance(triggerValue);
+		if (converter == null)
+		{
+			while(distance(position,base.position) < dist)
+			{
+				goto(space());
+			}
+		}
 		while(distance(position,base.position) < dist && distance(position,converter.position) < dist)
 		{
 			goto(space());
 		}
 		drop();
-		goto(space());
+		goto(base.position);
 	}
 	
 	
 	
-}
-int object::CountCubesAtShip(object base, float dist, int resourceToTake)
-{
-	object[] cubeList = radarall(resourceToTake);
-	object[] cubeAtShipList;
-	for(int i = 0;i < sizeof(cubeList);i++)
-	{
-		//errmode(0);
-		if(i == sizeof(cubeList))
-		{
-			message("No more " + cubeList[i].category + " at ship's location, halting script.", DisplayWarning);
-			break;
-		}
-		if(distance(base.position, cubeList[i].position) < dist)
-		{
-			cubeAtShipList[i] = cubeList[i];
-		}
-		//errmode(1);
-	}
-	return sizeof(cubeAtShipList);
 }
 void object::Maintenance(float triggerValue)
 {
@@ -99,7 +86,7 @@ void object::Maintenance(float triggerValue)
 		cellList[1] = NuclearCell;
 		object cell = radar(cellList);
 		
-		if(cell.energyLevel >= energyCell.energyLevel && cell.energyLevel >= triggerValue)
+		if(cell.energyLevel >= energyCell.energyLevel && cell.energyLevel >= triggerValue && energyCell.energyLevel <= triggerValue)
 		{
 			message("Swapping with better PowerCell/NuclearCell...",DisplayInfo);
 			goto(cell.position);
