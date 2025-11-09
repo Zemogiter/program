@@ -84,15 +84,21 @@ void object::RecyclerMainFunction(object wreckInFront)
 	{
 		RecyclerFailureHandler(wreckInFront);
 	}
-	UltimaGoto(wreckCheck().position,5,true);
-	//message("DEBUG - topo of the destination: " + topo(wreckCheck().position));
+	trygoto(space(wreckCheck().position));
+	
+	point a;
+	a.z=wreckCheck().position.z;
+	a.x=wreckCheck().position.x-((wreckCheck().position.x-position.x)/distance2d(position,wreckCheck().position))*5;    a.y=wreckCheck().position.y-((wreckCheck().position.y-position.y)/distance2d(position,wreckCheck().position))*5;
+	
+	goto(a);
+	
 	if (recycle() == 0 and wreckCheck() != null)
 	{
 		message("Wreck recycled, moving on.");
 	}
 	else if (recycle() != 0 and wreckCheck() != null) //recycle() failed so we try to the other side of the wreck
 	{
-		RecyclerFailiureHandler(wreckInFront);
+		RecyclerFailureHandler(wreckInFront);
 	}
 	else if (wreckCheck() == null)
 	{
@@ -112,7 +118,7 @@ void object::RecyclerFailureHandler(object wreckInFront) // handles cases when R
 	
 	if(topo(otherSide) > 0)
 	{
-		UltimaGoto(otherSide,5,true);
+		trygoto(otherSide);
 		turn(direction(wreckInFront.position));
 		recycle();
 	}
@@ -168,7 +174,8 @@ void object::Maintenance()
 	if(energyCell.energyLevel < 0.5 && energyCell.category != NuclearCell)
 	{
 		message("Battery low, going to recharge facility", DisplayInfo);
-		UltimaGoto(power.position,0,false);
+		trygoto(power.position);
+		//UltimaGoto(power.position,0,false);
 		while(energyCell.energyLevel < 1)
 		{
 			wait(1);
@@ -188,7 +195,8 @@ void object::Maintenance()
 	if(shieldLevel < 0.5)
 	{
 		message("Structural integrity low, going to Repair Center", DisplayInfo);
-		UltimaGoto(repair.position,0,false);
+		trygoto(repair.position);
+		//UltimaGoto(repair.position,0,false);
 		while(shieldLevel < 1)
 		{
 			wait(1);
@@ -205,53 +213,30 @@ void object::Maintenance()
 	
 	errmode(1);
 }
-void object::UltimaGoto(point destination, float dist, bool isWreck)
+void object::trygoto(point pos)
 {
 	errmode(0);
-	if (isWreck == true) // alternative goto to fix the issue of recycler bumping into wrecks, credits to DemoLisH from colobot.cba.pl
+	int tries = 0;
+	
+	while (distance(position, pos) > 0) //While we are moving towards destination...
 	{
-		point a;
-		a.z=destination.z;
-		a.x=destination.x-((destination.x-position.x)/distance2d(position,destination))*dist;    a.y=destination.y-((destination.y-position.y)/distance2d(position,destination))*dist;
-		
-		goto(a);
-		/*
-		if (goto(a) != 0)
+		while (goto(pos) != 0) //How we are handling goto() errors
 		{
-			message("UlitmaGoto() error, trying to go to the middle point.", DisplayWarning);
-			point midPoint;
-			midPoint.x = ((position.x + a.x) / 2);
-			midPoint.y = ((position.y + a.y) / 2);
-			midPoint.z = ((position.z + a.z) / 2);
-			goto(midPoint);
-			wait(1);
-			goto(a, 0, 1);
-		}
-		*/
-	}
-	else
-	{
-		int tries = 0;
-		while (distance(position, destination) > 0) //While we are moving towards destination...
-		{
-			while (goto(destination) != 0) //How we are handling goto() errors
+			if(tries > 2)
 			{
-				if(tries > 2)
-				{
-					point midPoint;
-					midPoint.x = ((position.x + destination.x) / 2);
-					midPoint.y = ((position.y + destination.y) / 2);
-					midPoint.z = ((position.z + destination.z) / 2);
-					goto(midPoint);
-					wait(1);
-					goto(destination, 0, 1);
-					break;
-				}
-				else wait(2);
-				tries++;
+				point midPoint;
+				midPoint.x = ((position.x + pos.x) / 2);
+				midPoint.y = ((position.y + pos.y) / 2);
+				midPoint.z = ((position.z + pos.z) / 2);
+				goto(midPoint);
+				wait(1);
+				goto(pos, 0, 1);
+				break;
 			}
-			break;
+			else wait(2);
+			tries++;
 		}
+		errmode(1);
+		break;
 	}
-	errmode(1);
 }
