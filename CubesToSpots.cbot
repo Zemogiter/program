@@ -103,7 +103,7 @@ object object::SelectNextSpot(object[] spotList)
 			message("No spots found on the map.", DisplayWarning);
 			return null;
 		}
-		if(search(Titanium,spotList[i].position,0,2) == null)
+		if(spotList[i] != null && search(Titanium,spotList[i].position,0,2) == null) //checking for null to prevent illegal object errors
 		{
 			return spotList[i];
 		}
