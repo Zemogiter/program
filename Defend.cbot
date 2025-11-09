@@ -17,7 +17,7 @@ extern void object::Defend()
 		enemy = radar(cat,0,360,0,perimeterToScan);
 		if(enemy == null) // if no enemy around, do the maintenance procedure
 		{
-			Maintenance()
+			Maintenance();
 		}
 		else
 		{
@@ -102,11 +102,11 @@ void object::getBackToPosition(point pos, int perimeter)
 	{
 		float dif = pos.z-position.z;
 		float ang = asin(dif/dis);
-	
+		
 		jet(1-(ang/-20));
-	
+		
 		float dir = direction(pos);
-	
+		
 		motor(1-dir/22.5,1+dir/22.5);    // move back into position
 	}
 	
