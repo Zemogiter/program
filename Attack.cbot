@@ -48,7 +48,7 @@ extern void object::Attack()
 	
 	while((target = radar(cat)) != null)
 	{
-		maint();
+		Maintenance();
 		
 		if(temperature > 0.8)
 		    hot = true;
