@@ -236,6 +236,9 @@ void object::Maintenance(float triggerValue, int crashMode, bool verboseMode)
 				drop();
 				grab(Behind);
 				drop(EnergyCell);
+				//getting the ore back without passing more argumnets into this function
+				turn(90);
+				grab();
 			}
 		}
 		//power facility exists but cell is closer
