@@ -101,3 +101,53 @@ else if(spot != null and distance(cubeList[i].position,spot.position) > 4 and di
 {
 	return cubeList[i];
 }
+void object::UltimaGoto(point destination, float dist, bool isWreck)
+{
+	errmode(0);
+	if (isWreck == true) // alternative goto to fix the issue of recycler bumping into wrecks, credits to DemoLisH from colobot.cba.pl
+	{
+		point a;
+		a.z=destination.z;
+		a.x=destination.x-((destination.x-position.x)/distance2d(position,destination))*dist;    a.y=destination.y-((destination.y-position.y)/distance2d(position,destination))*dist;
+		
+		goto(a);
+		
+		if (goto(a) != 0)
+		{
+			message("UlitmaGoto() error, trying to go to the middle point.", DisplayWarning);
+			point midPoint;
+			midPoint.x = ((position.x + a.x) / 2);
+			midPoint.y = ((position.y + a.y) / 2);
+			midPoint.z = ((position.z + a.z) / 2);
+			goto(midPoint);
+			wait(1);
+			goto(a, 0, 1);
+		}
+		
+	}
+	else
+	{
+		int tries = 0;
+		while (distance(position, destination) > 0) //While we are moving towards destination...
+		{
+			while (goto(destination) != 0) //How we are handling goto() errors
+			{
+				if(tries > 2)
+				{
+					point midPoint;
+					midPoint.x = ((position.x + destination.x) / 2);
+					midPoint.y = ((position.y + destination.y) / 2);
+					midPoint.z = ((position.z + destination.z) / 2);
+					goto(midPoint);
+					wait(1);
+					goto(destination, 0, 1);
+					break;
+				}
+				else wait(2);
+				tries++;
+			}
+			break;
+		}
+	}
+	errmode(1);
+}
